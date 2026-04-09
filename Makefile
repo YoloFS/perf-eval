@@ -1,54 +1,14 @@
-# ── Paper artifact installation ───────────────────────────────────────
+# ── Paths ─────────────────────────────────────────────────────────────
 
-REPO_ROOT := $(shell git -C $(dir $(lastword $(MAKEFILE_LIST))) rev-parse --show-toplevel)
-PAPER_DIR ?= $(REPO_ROOT)/paper
+BENCH_DIR  := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+AGFS_ROOT  := $(abspath $(BENCH_DIR)/..)
+YOLO_BENCH := $(AGFS_ROOT)/local/target/release/yolo-bench
+PAPER_DIR  ?= $(AGFS_ROOT)/paper
+
+# ── Paper artifact installation ───────────────────────────────────────
 
 .PHONY: install-paper
 
 install-paper:
-	cargo build --release --manifest-path $(REPO_ROOT)/Cargo.toml -p yolo-bench
-	$(REPO_ROOT)/local/target/release/yolo-bench install-paper --paper-dir $(PAPER_DIR)
-
-# ── Third-party backends ──────────────────────────────────────────────
-
-BRANCHFS_OUT := third_party/branchfs/target/release/branchfs
-TRY_DIR      := third_party/try
-TRY_COMMIT   := $(TRY_DIR)/utils/try-commit
-
-.PHONY: install uninstall
-
-install: install-try install-branchfs
-
-uninstall: uninstall-try uninstall-branchfs
-
-# ── try ───────────────────────────────────────────────────────────────
-
-.PHONY: install-try uninstall-try
-
-$(TRY_DIR)/configure: $(TRY_DIR)/configure.ac
-	cd $(TRY_DIR) && autoconf
-
-$(TRY_COMMIT): $(TRY_DIR)/configure $(wildcard $(TRY_DIR)/utils/*.c)
-	cd $(TRY_DIR) && ./configure --prefix=/usr/local
-	$(MAKE) -C $(TRY_DIR)
-
-install-try: $(TRY_COMMIT)
-	sudo $(MAKE) -C $(TRY_DIR) install
-
-uninstall-try:
-	sudo rm -f /usr/local/bin/try
-	sudo rm -f /usr/local/bin/try-summary
-	sudo rm -f /usr/local/bin/try-commit
-
-# ── branchfs ──────────────────────────────────────────────────────────
-
-.PHONY: install-branchfs uninstall-branchfs
-
-install-branchfs:
-	tmp=$$(mktemp -d) && cp -a third_party/branchfs/. "$$tmp" && \
-	cargo build --release --manifest-path "$$tmp/Cargo.toml" && \
-	sudo install -m 755 "$$tmp/target/release/branchfs" /usr/local/bin/branchfs && \
-	rm -rf "$$tmp"
-
-uninstall-branchfs:
-	sudo rm -f /usr/local/bin/branchfs
+	cargo build --release
+	$(YOLO_BENCH) install-paper --paper-dir $(PAPER_DIR)

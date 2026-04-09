@@ -569,7 +569,7 @@ fn require_fio() -> Result<()> {
         bail!(
             "fio is not installed. Per-operation I/O benchmarks require fio.\n\
              Install with: sudo apt-get install fio\n\
-             Or run: bench/install_deps.sh"
+             Or run: bench/setup.sh"
         );
     }
     Ok(())
