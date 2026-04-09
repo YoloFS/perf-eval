@@ -194,11 +194,11 @@ impl Workload for MiniDevWorkflow {
             (self.repo_cache.to_string_lossy().into_owned(), Perm::Allow),
             (
                 self.fixture_dir.to_string_lossy().into_owned(),
-                Perm::AllowRx,
+                Perm::Ro,
             ),
-            ("/etc".to_string(), Perm::AllowRo),
+            ("/etc".to_string(), Perm::Ro),
             ("/etc/gitconfig".to_string(), Perm::Allow),
-            ("/tmp".to_string(), Perm::AllowRw),
+            ("/tmp".to_string(), Perm::Allow),
         ];
         if let Some(home) = dirs_next::home_dir() {
             rules.push((
@@ -207,7 +207,7 @@ impl Workload for MiniDevWorkflow {
             ));
             rules.push((
                 home.join(".config/git").to_string_lossy().into_owned(),
-                Perm::AllowRx,
+                Perm::Ro,
             ));
         }
         rules

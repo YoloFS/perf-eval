@@ -68,7 +68,7 @@ impl Workload for RenameFiles {
     }
 
     fn realistic_rules(&self, session_root: &Path) -> Vec<(String, Perm)> {
-        vec![(session_root.to_string_lossy().into_owned(), Perm::AllowRw)]
+        vec![(session_root.to_string_lossy().into_owned(), Perm::Allow)]
     }
 
     fn populate_base(&self, base: &Path) -> Result<()> {

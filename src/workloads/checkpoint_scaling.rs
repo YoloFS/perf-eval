@@ -67,7 +67,7 @@ impl Workload for CheckpointScaling {
     }
 
     fn realistic_rules(&self, root: &Path) -> Vec<(String, Perm)> {
-        vec![(root.to_string_lossy().into_owned(), Perm::AllowRw)]
+        vec![(root.to_string_lossy().into_owned(), Perm::Allow)]
     }
 
     fn run(&self, dest: &Path, _verbose: bool) -> Result<()> {

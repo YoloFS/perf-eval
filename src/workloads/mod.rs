@@ -280,7 +280,7 @@ pub fn populate_files(dir: &Path, count: usize, size: usize) -> Result<()> {
 }
 
 pub fn allow_rw_rules(session_root: &Path) -> Vec<(String, Perm)> {
-    vec![(session_root.to_string_lossy().into_owned(), Perm::AllowRw)]
+    vec![(session_root.to_string_lossy().into_owned(), Perm::Allow)]
 }
 
 pub fn emit_op_result(result: &OpResult) -> Result<()> {

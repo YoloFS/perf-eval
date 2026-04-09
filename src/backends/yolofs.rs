@@ -379,11 +379,11 @@ impl Backend for YoloRealistic {
             // linker, and tools (tar, xz, etc.).
             if let Ok(exe) = std::env::current_exe() {
                 if let Some(dir) = exe.parent() {
-                    rules.insert(dir.to_string_lossy().into_owned(), Perm::AllowRx);
+                    rules.insert(dir.to_string_lossy().into_owned(), Perm::Ro);
                 }
             }
             for dir in ["/usr", "/lib", "/lib64", "/bin", "/sbin"] {
-                rules.insert(dir.to_string(), Perm::AllowRx);
+                rules.insert(dir.to_string(), Perm::Ro);
             }
         }
         let config = Config {
