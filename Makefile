@@ -2,7 +2,7 @@
 
 BENCH_DIR  := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 AGFS_ROOT  := $(abspath $(BENCH_DIR)/..)
-YOLO_BENCH := $(AGFS_ROOT)/local/target/release/yolo-bench
+YOLO_BENCH := $(BENCH_DIR)/target/release/yolo-bench
 PAPER_DIR  ?= $(AGFS_ROOT)/paper
 
 # ── Paper artifact installation ───────────────────────────────────────

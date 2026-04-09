@@ -5,7 +5,7 @@ set -euo pipefail
 
 BENCH_DIR="$(cd "$(dirname "$0")" && pwd)"
 AGFS_ROOT="$(cd "$BENCH_DIR/.." && pwd)"
-YOLO_BENCH="$AGFS_ROOT/local/target/release/yolo-bench"
+YOLO_BENCH="$BENCH_DIR/target/release/yolo-bench"
 
 mode="${1:-}"
 case "$mode" in
