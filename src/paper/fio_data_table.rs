@@ -81,6 +81,8 @@ fn build_tex(results: &BenchResults) -> Result<String> {
     tex.push_str("\\usepackage[table]{xcolor}\n");
     tex.push_str("\\usepackage{hhline}\n");
     tex.push_str(TABLEAU_COLOR_DEFS);
+    tex.push_str("\\usepackage{xspace}\n");
+    tex.push_str("\\providecommand{\\fs}{YoloFS\\xspace}\n");
     tex.push_str("\\begin{document}\n");
     tex.push_str("\\thispagestyle{empty}\n");
 

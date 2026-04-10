@@ -8,9 +8,9 @@ use std::process::Command;
 pub fn backend_display_name(name: &str) -> &'static str {
     match name {
         "native" => "Base",
-        "yolo-no-perm" => "YoloFS",
-        "yolo-realistic" => "YoloFS-R",
-        "yolo" => "YoloFS",
+        "yolo-no-perm" => "\\fs",
+        "yolo-realistic" => "\\fs",
+        "yolo" => "\\fs",
         "overlayfs" => "OverlayFS",
         "branchfs" => "BranchFS",
         _ => "Unknown",
