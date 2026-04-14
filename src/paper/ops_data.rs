@@ -12,15 +12,7 @@ const CAPTION: &str = "Single-threaded I/O throughput on a 1 GB staged file with
 /// LaTeX label for cross-referencing.
 const LABEL: &str = "tab:ops-data";
 const TABLEAU_COLOR_DEFS: &str = "\
-\\definecolor{TableauBlue}{HTML}{4E79A7}\n\
-\\definecolor{TableauOrange}{HTML}{F28E2C}\n\
 \\definecolor{TableauGreen}{HTML}{59A14F}\n\
-\\definecolor{TableauYellow}{HTML}{EDC949}\n\
-\\definecolor{TableauPurple}{HTML}{AF7AA1}\n\
-\\definecolor{TableauPink}{HTML}{FF9DA7}\n\
-\\definecolor{TableauBrown}{HTML}{9C755F}\n\
-\\definecolor{TableauGray}{HTML}{BAB0AB}\n\
-\\definecolor{TableauTeal}{HTML}{76B7B2}\n\
 \\definecolor{TableauRed}{HTML}{E15759}\n";
 
 pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<()> {

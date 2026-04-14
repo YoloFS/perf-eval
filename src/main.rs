@@ -1437,19 +1437,19 @@ fn main() -> Result<()> {
             std::fs::create_dir_all(&generated_dir)?;
             match name.as_str() {
                 "commit-time" => {
-                    paper::commit_time_figure::render(&results, &generated_dir)?;
+                    paper::commit::render(&results, &generated_dir)?;
                 }
                 "meta-ops" => {
-                    paper::meta_ops_figure::render(&results, &generated_dir)?;
+                    paper::ops_meta::render(&results, &generated_dir)?;
                 }
                 "fio-table" => {
-                    paper::fio_data_table::render(&results, &generated_dir)?;
+                    paper::ops_data::render(&results, &generated_dir)?;
                 }
                 "checkpoint-scaling" => {
-                    paper::checkpoint_scaling_figure::render(&out_dir, &generated_dir)?;
+                    paper::checkpoint::render(&out_dir, &generated_dir)?;
                 }
                 "dev-workflow" => {
-                    paper::dev_workflow_figure::render(&results, &generated_dir)?;
+                    paper::dev_workflow::render(&results, &generated_dir)?;
                 }
                 _ => bail!(
                     "unknown paper artifact: {name}. Available: commit-time, meta-ops, fio-table, checkpoint-scaling, dev-workflow"

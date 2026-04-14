@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import numpy as np
 from matplotlib.ticker import MaxNLocator
-from plot_utils import (
+from utils import (
     BACKEND_COLORS,
     NATIVE_LINE_KW,
     UNCAPPABLE,

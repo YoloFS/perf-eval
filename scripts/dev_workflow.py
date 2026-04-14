@@ -7,7 +7,7 @@ import matplotlib.patches as mpatches
 import matplotlib.patheffects as pe
 import numpy as np
 from matplotlib.ticker import MaxNLocator
-from plot_utils import (
+from utils import (
     BACKEND_COLORS,
     NATIVE_LINE_KW,
     backend_legend_handle,

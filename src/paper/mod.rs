@@ -1,10 +1,10 @@
 //! Publication-ready artifacts: LaTeX tables, figures, and HTML index.
 
-pub mod checkpoint_scaling_figure;
-pub mod commit_time_figure;
-pub mod dev_workflow_figure;
-pub mod fio_data_table;
-pub mod meta_ops_figure;
+pub mod checkpoint;
+pub mod commit;
+pub mod dev_workflow;
+pub mod ops_data;
+pub mod ops_meta;
 mod util;
 
 use anyhow::{Context, Result};
@@ -47,17 +47,17 @@ pub fn install(results: &crate::BenchResults, out_dir: &Path, paper_path: &Path)
         paper_path.to_path_buf()
     };
     std::fs::create_dir_all(&gen_dir).with_context(|| format!("creating {}", gen_dir.display()))?;
-    fio_data_table::render(results, &gen_dir)?;
-    meta_ops_figure::render(results, &gen_dir)?;
-    commit_time_figure::render(results, &gen_dir)?;
-    checkpoint_scaling_figure::render(out_dir, &gen_dir)?;
-    dev_workflow_figure::render(results, &gen_dir)?;
+    ops_data::render(results, &gen_dir)?;
+    ops_meta::render(results, &gen_dir)?;
+    commit::render(results, &gen_dir)?;
+    checkpoint::render(out_dir, &gen_dir)?;
+    dev_workflow::render(results, &gen_dir)?;
 
     let plot_scripts = [
-        "plot_meta_ops.py",
-        "plot_commit_time.py",
-        "plot_checkpoint_scaling.py",
-        "plot_dev_workflow.py",
+        "ops_meta.py",
+        "commit.py",
+        "checkpoint.py",
+        "dev_workflow.py",
     ];
     for script in &plot_scripts {
         match run_plot_script(script, &gen_dir) {

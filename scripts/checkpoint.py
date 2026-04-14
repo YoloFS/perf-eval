@@ -4,7 +4,7 @@ import sys
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator, FuncFormatter
-from plot_utils import (
+from utils import (
     BACKEND_COLORS,
     TABLEAU10,
     generated_dir_from_argv,

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import MaxNLocator
 from matplotlib.patches import Patch
-from plot_utils import (
+from utils import (
     NATIVE_LINE_KW,
     TABLEAU10,
     generated_dir_from_argv,
