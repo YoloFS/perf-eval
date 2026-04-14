@@ -5,9 +5,6 @@ use crate::BenchResults;
 use anyhow::{Context, Result};
 use std::path::Path;
 
-const CAPTION: &str =
-    "A developer workload of setting up and iterating on the Linux kernel codebase.";
-const LABEL: &str = "fig:dev-workflow";
 const WORKLOAD: &str = "dev-workflow";
 
 const FACETS: &[(&str, &[&str])] = &[
@@ -42,15 +39,13 @@ const FACETS: &[(&str, &[&str])] = &[
 const BACKENDS: &[(&str, &str)] = &[("yolo-realistic", "YoloFS"), ("overlayfs", "OverlayFS")];
 
 pub fn artifact_meta(paper_dir: &Path) -> Artifact {
-    let tex_path = paper_dir.join("dev-workflow-figure.tex");
-    let plot_pdf = paper_dir.join("dev-workflow-figure-plot.pdf");
+    let plot_pdf = paper_dir.join("dev-workflow-figure.pdf");
     Artifact {
         group: None,
         title: "Developer workflow breakdown".to_string(),
         preferred: true,
-        tex_path: format!("paper/{}", tex_path.file_name().unwrap().to_string_lossy()),
+        tex_path: String::new(),
         pdf_path: None,
-        tex_abs: tex_path,
         plot_pdfs: vec![plot_pdf],
     }
 }
@@ -117,7 +112,7 @@ pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<Artifact> {
 
     let preamble = super::util::plot_preamble();
     let py_path = paper_dir.join("dev-workflow-figure.py");
-    let pdf_path = paper_dir.join("dev-workflow-figure-plot.pdf");
+    let pdf_path = paper_dir.join("dev-workflow-figure.pdf");
     super::util::ensure_plot_style(paper_dir)?;
 
     let script = format!(
@@ -231,7 +226,8 @@ total_bbox = ax_total.get_position()
 fig.text(total_bbox.x0 + total_bbox.width / 2, title_y, 'Total', ha='center', va='top',
          fontsize=7.3, fontweight='bold')
 
-fig.savefig('{pdf_path}', bbox_inches='tight', dpi=300)
+_out = os.path.join(os.path.dirname(os.path.abspath(__file__)), '{pdf_path}')
+fig.savefig(_out, bbox_inches='tight', dpi=300, metadata={{"CreationDate": None}})
 plt.close(fig)
 "#,
         preamble = preamble,
@@ -252,7 +248,7 @@ plt.close(fig)
                 .collect::<Vec<_>>()
                 .join(", ")
         ),
-        pdf_path = pdf_path.display(),
+        pdf_path = pdf_path.file_name().unwrap().to_string_lossy(),
     );
 
     std::fs::write(&py_path, &script).with_context(|| format!("writing {}", py_path.display()))?;
@@ -264,47 +260,17 @@ plt.close(fig)
         let stderr = String::from_utf8_lossy(&out.stderr);
         anyhow::bail!("matplotlib failed: {stderr}");
     }
-
-    let plot_pdf_name = pdf_path.file_name().unwrap().to_string_lossy();
-    let tex_path = paper_dir.join("dev-workflow-figure.tex");
-    let tex = format!(
-        "\\PassOptionsToPackage{{activate=false}}{{microtype}}\n\
-         \\documentclass[sigplan,screen]{{acmart}}\n\
-         \\settopmatter{{printacmref=false,printfolios=false}}\n\
-         \\renewcommand\\footnotetextcopyrightpermission[1]{{}}\n\
-         \\usepackage{{graphicx}}\n\
-         \\begin{{document}}\n\
-         \\thispagestyle{{empty}}\n\
-         % --- BEGIN figure fragment (includable via \\input) ---\n\
-         \\begin{{figure}}[t]\n\
-         \\centering\n\
-         \\includegraphics[width=\\columnwidth]{{{plot_pdf_name}}}\n\
-         \\caption{{{CAPTION}}}\n\
-         \\label{{{LABEL}}}\n\
-         \\end{{figure}}\n\
-         % --- END figure fragment ---\n\
-         \\end{{document}}\n"
-    );
-    std::fs::write(&tex_path, &tex).with_context(|| format!("writing {}", tex_path.display()))?;
-
-    let preview_pdf = match super::run_pdflatex_cropped(&tex_path, paper_dir) {
-        Ok(p) => Some(format!(
-            "paper/{}",
-            p.file_name().unwrap().to_string_lossy()
-        )),
-        Err(e) => {
-            eprintln!("  warning: dev-workflow-figure: {e:#}");
-            Some(format!("paper/{plot_pdf_name}"))
-        }
-    };
+    eprintln!("Figure written to {}", pdf_path.display());
 
     Ok(Artifact {
         group: None,
         title: "Developer workflow breakdown".to_string(),
         preferred: true,
-        tex_path: format!("paper/{}", tex_path.file_name().unwrap().to_string_lossy()),
-        pdf_path: preview_pdf,
-        tex_abs: tex_path,
+        tex_path: String::new(),
+        pdf_path: Some(format!(
+            "paper/{}",
+            pdf_path.file_name().unwrap().to_string_lossy()
+        )),
         plot_pdfs: vec![pdf_path],
     })
 }

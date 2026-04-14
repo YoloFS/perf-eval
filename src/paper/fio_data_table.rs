@@ -1,7 +1,7 @@
 //! Publication table: fio data-operation throughput summary.
 
 use super::Artifact;
-use super::util::{backend_display_name, latex_escape, run_pdflatex_cropped};
+use super::util::{backend_display_name, latex_escape};
 use crate::BenchResults;
 use crate::workload::WorkloadKind;
 use crate::workloads;
@@ -29,38 +29,26 @@ pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<Artifact> {
 
     let tex = build_tex(results)?;
     std::fs::write(&tex_path, &tex).with_context(|| format!("writing {}", tex_path.display()))?;
-
-    let pdf_path = match run_pdflatex_cropped(&tex_path, paper_dir) {
-        Ok(p) => Some(p),
-        Err(e) => {
-            eprintln!("  warning: {e:#}");
-            None
-        }
-    };
+    eprintln!("Table written to {}", tex_path.display());
 
     Ok(Artifact {
         group: None,
         title: "Data-op throughput summary (fio)".to_string(),
         preferred: true,
         tex_path: format!("paper/{}", tex_path.file_name().unwrap().to_string_lossy()),
-        pdf_path: pdf_path
-            .as_ref()
-            .map(|p| format!("paper/{}", p.file_name().unwrap().to_string_lossy())),
-        tex_abs: tex_path.to_path_buf(),
-        plot_pdfs: vec![], // table has no plot PDFs
+        pdf_path: None,
+        plot_pdfs: vec![],
     })
 }
 
 /// Return artifact metadata without rendering (for install-paper).
-pub fn artifact_meta(paper_dir: &Path) -> Artifact {
-    let tex_path = paper_dir.join("op-data-summary.tex");
+pub fn artifact_meta(_paper_dir: &Path) -> Artifact {
     Artifact {
         group: None,
         title: "Data-op throughput summary (fio)".to_string(),
         preferred: true,
-        tex_path: format!("paper/{}", tex_path.file_name().unwrap().to_string_lossy()),
+        tex_path: format!("paper/op-data-summary.tex"),
         pdf_path: None,
-        tex_abs: tex_path,
         plot_pdfs: vec![],
     }
 }
@@ -72,23 +60,6 @@ fn build_tex(results: &BenchResults) -> Result<String> {
 
     let mut tex = String::new();
 
-    // Preamble — use acmart sigplan class for publication-matching fonts
-    // and metrics. pdfcrop trims to the content bounding box afterward.
-    tex.push_str("\\documentclass[sigplan,screen]{acmart}\n");
-    tex.push_str("\\settopmatter{printacmref=false,printfolios=false}\n");
-    tex.push_str("\\renewcommand\\footnotetextcopyrightpermission[1]{}\n");
-    tex.push_str("\\usepackage{multirow}\n");
-    tex.push_str("\\usepackage[table]{xcolor}\n");
-    tex.push_str("\\usepackage{hhline}\n");
-    tex.push_str(TABLEAU_COLOR_DEFS);
-    tex.push_str("\\usepackage{xspace}\n");
-    tex.push_str("\\providecommand{\\fs}{YoloFS\\xspace}\n");
-    tex.push_str("\\begin{document}\n");
-    tex.push_str("\\thispagestyle{empty}\n");
-
-    // The table fragment lives between BEGIN/END markers so it can be
-    // extracted and \\input{} into a larger paper .tex file.
-    tex.push_str("% --- BEGIN table fragment (includable via \\input) ---\n");
     tex.push_str(TABLEAU_COLOR_DEFS);
     tex.push_str("\\begin{table}[t]\n");
     tex.push_str("\\centering\n");
@@ -223,9 +194,6 @@ fn build_tex(results: &BenchResults) -> Result<String> {
     tex.push_str(&format!("\\caption{{{CAPTION}}}\n"));
     tex.push_str(&format!("\\label{{{LABEL}}}\n"));
     tex.push_str("\\end{table}\n");
-    tex.push_str("% --- END table fragment ---\n");
-
-    tex.push_str("\\end{document}\n");
     Ok(tex)
 }
 

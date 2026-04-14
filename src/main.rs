@@ -528,19 +528,39 @@ fn git_path_dirty(root: &Path, path: &str) -> Result<bool> {
     Ok(!output.stdout.is_empty())
 }
 
+/// Check whether a git commit object exists in the repo.
+/// Results are cached to avoid repeated subprocess spawns.
+fn git_commit_exists(commit: &str) -> bool {
+    use std::cell::RefCell;
+    use std::collections::HashMap;
+
+    thread_local! {
+        static CACHE: RefCell<HashMap<String, bool>> = RefCell::new(HashMap::new());
+    }
+
+    CACHE.with(|c| {
+        *c.borrow_mut().entry(commit.to_string()).or_insert_with(|| {
+            Command::new("git")
+                .args(["cat-file", "-e", commit])
+                .current_dir(repo_root())
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false)
+        })
+    })
+}
+
 pub(crate) fn repo_paths_changed_between(from_commit: &str, to_commit: &str) -> Result<bool> {
-    let root = repo_root();
+    if !git_commit_exists(from_commit) {
+        bail!("commit {from_commit} not found");
+    }
+    if !git_commit_exists(to_commit) {
+        bail!("commit {to_commit} not found");
+    }
+
     let status = Command::new("git")
-        .args([
-            "diff",
-            "--quiet",
-            from_commit,
-            to_commit,
-            "--",
-            "user",
-            "kmod",
-        ])
-        .current_dir(&root)
+        .args(["diff", "--quiet", from_commit, to_commit, "--", "user", "kmod"])
+        .current_dir(repo_root())
         .status()
         .with_context(|| {
             format!("checking git diff between {from_commit} and {to_commit} for user/ and kmod/")

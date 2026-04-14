@@ -62,11 +62,6 @@ struct FigureVariant {
     cap_factor: f64,
 }
 
-/// Shared caption and label for the paper figure.
-const CAPTION: &str = "Metadata operation latency. \
-     The files can reside in the base filesystem, a snapshot, or the staging area.";
-const LABEL: &str = "fig:meta-ops";
-
 const VARIANT: FigureVariant = FigureVariant {
     name: "meta-ops-capped",
     title: "Meta ops (100 files, capped + annotated)",
@@ -88,22 +83,20 @@ pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<Vec<Artifact>>
 
 /// Return artifact metadata without rendering (for install-paper).
 pub fn artifact_metas(paper_dir: &Path) -> Vec<Artifact> {
-    let tex_path = paper_dir.join(format!("{}.tex", VARIANT.name));
-    let plot_pdf = paper_dir.join(format!("{}-plot.pdf", VARIANT.name));
+    let plot_pdf = paper_dir.join(format!("{}.pdf", VARIANT.name));
     vec![Artifact {
         group: Some("Metadata operation latency".to_string()),
         title: VARIANT.title.to_string(),
         preferred: true,
-        tex_path: format!("paper/{}", tex_path.file_name().unwrap().to_string_lossy()),
+        tex_path: String::new(),
         pdf_path: None,
-        tex_abs: tex_path,
         plot_pdfs: vec![plot_pdf],
     }]
 }
 
 fn render_variant(variant: &FigureVariant, data_csv: &str, paper_dir: &Path) -> Result<Artifact> {
     let py_path = paper_dir.join(format!("{}.py", variant.name));
-    let pdf_path = paper_dir.join(format!("{}-plot.pdf", variant.name));
+    let pdf_path = paper_dir.join(format!("{}.pdf", variant.name));
 
     super::util::ensure_plot_style(paper_dir)?;
     let script = build_script(variant, data_csv, &pdf_path);
@@ -118,50 +111,17 @@ fn render_variant(variant: &FigureVariant, data_csv: &str, paper_dir: &Path) -> 
         let stderr = String::from_utf8_lossy(&out.stderr);
         anyhow::bail!("matplotlib script failed: {stderr}");
     }
-
-    // Write a full LaTeX document that wraps the matplotlib PDF in a
-    // captioned figure float, then compile + crop for preview.
-    let plot_pdf_name = pdf_path.file_name().unwrap().to_string_lossy();
-    let tex_path = paper_dir.join(format!("{}.tex", variant.name));
-    let tex = format!(
-        "\\PassOptionsToPackage{{activate=false}}{{microtype}}\n\
-         \\documentclass[sigplan,screen]{{acmart}}\n\
-         \\settopmatter{{printacmref=false,printfolios=false}}\n\
-         \\renewcommand\\footnotetextcopyrightpermission[1]{{}}\n\
-         \\usepackage{{graphicx}}\n\
-         \\begin{{document}}\n\
-         \\thispagestyle{{empty}}\n\
-         % --- BEGIN figure fragment (includable via \\input) ---\n\
-         \\begin{{figure*}}[h]\n\
-         \\centering\n\
-         \\includegraphics[width=\\textwidth]{{{plot_pdf_name}}}\n\
-         \\caption{{{CAPTION}}}\n\
-         \\label{{{LABEL}}}\n\
-         \\end{{figure*}}\n\
-         % --- END figure fragment ---\n\
-         \\end{{document}}\n",
-    );
-    std::fs::write(&tex_path, &tex).with_context(|| format!("writing {}", tex_path.display()))?;
-
-    let preview_pdf = match super::run_pdflatex_cropped(&tex_path, paper_dir) {
-        Ok(p) => Some(format!(
-            "paper/{}",
-            p.file_name().unwrap().to_string_lossy()
-        )),
-        Err(e) => {
-            eprintln!("  warning: {}: {e:#}", variant.name);
-            // Fall back to the raw matplotlib PDF.
-            Some(format!("paper/{plot_pdf_name}"))
-        }
-    };
+    eprintln!("Figure written to {}", pdf_path.display());
 
     Ok(Artifact {
         group: Some("Metadata operation latency".to_string()),
         title: variant.title.to_string(),
         preferred: true,
-        tex_path: format!("paper/{}", tex_path.file_name().unwrap().to_string_lossy()),
-        pdf_path: preview_pdf,
-        tex_abs: tex_path.to_path_buf(),
+        tex_path: String::new(),
+        pdf_path: Some(format!(
+            "paper/{}",
+            pdf_path.file_name().unwrap().to_string_lossy()
+        )),
         plot_pdfs: vec![pdf_path.to_path_buf()],
     })
 }
@@ -412,7 +372,8 @@ fig.legend(handles=legend_items, loc='upper center', ncol=nb + 1,
 
 fig.subplots_adjust(top=0.72)
 
-fig.savefig('{pdf_path}', bbox_inches='tight', dpi=300)
+_out = os.path.join(os.path.dirname(os.path.abspath(__file__)), '{pdf_path}')
+fig.savefig(_out, bbox_inches='tight', dpi=300, metadata={{"CreationDate": None}})
 plt.close(fig)
 "#,
         preamble = preamble,
@@ -422,6 +383,6 @@ plt.close(fig)
         native_key = native_name,
         sources = sources_py.join(", "),
         cap_factor = variant.cap_factor,
-        pdf_path = pdf_path.display(),
+        pdf_path = pdf_path.file_name().unwrap().to_string_lossy(),
     )
 }

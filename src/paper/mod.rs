@@ -7,8 +7,6 @@ pub mod fio_data_table;
 pub mod meta_ops_figure;
 mod util;
 
-pub use util::run_pdflatex_cropped;
-
 use anyhow::{Context, Result};
 use std::path::Path;
 
@@ -63,17 +61,13 @@ pub(crate) struct Artifact {
     /// Relative path for HTML links (e.g. "paper/foo.tex").
     tex_path: String,
     pdf_path: Option<String>,
-    /// Absolute path to the generated .tex file (for install-paper extraction).
-    tex_abs: std::path::PathBuf,
     /// Absolute paths to plot PDFs that must be copied alongside the .tex fragment.
     plot_pdfs: Vec<std::path::PathBuf>,
 }
 
 /// Install preferred paper artifacts into the paper repository.
 ///
-/// Reads already-rendered .tex and plot PDFs from `<out_dir>/paper/`,
-/// extracts float fragments (between BEGIN/END markers), and writes
-/// everything to `<paper_dir>/generated/`.
+/// Copies plot PDFs from `<out_dir>/paper/` to `<paper_dir>/generated/`.
 ///
 /// Run `yolo-bench rerender` first if artifacts are stale.
 pub fn install(_results: &crate::BenchResults, out_dir: &Path, paper_dir: &Path) -> Result<()> {
@@ -110,20 +104,6 @@ pub fn install(_results: &crate::BenchResults, out_dir: &Path, paper_dir: &Path)
             continue;
         }
 
-        // Read the full .tex file and extract the float fragment.
-        let tex_content = std::fs::read_to_string(&art.tex_abs)
-            .with_context(|| format!("reading {}", art.tex_abs.display()))?;
-
-        let fragment = extract_fragment(&tex_content).unwrap_or(&tex_content);
-
-        // For figures, rewrite \includegraphics paths to reference generated/.
-        let fragment = rewrite_includegraphics(fragment, "generated");
-
-        let dest_tex = gen_dir.join(art.tex_abs.file_name().unwrap());
-        std::fs::write(&dest_tex, &fragment)
-            .with_context(|| format!("writing {}", dest_tex.display()))?;
-        installed.push(format!("  tex: {}", dest_tex.display()));
-
         // Copy associated plot PDFs.
         for pdf in &art.plot_pdfs {
             if pdf.exists() {
@@ -143,57 +123,9 @@ pub fn install(_results: &crate::BenchResults, out_dir: &Path, paper_dir: &Path)
         for line in &installed {
             eprintln!("{line}");
         }
-        eprintln!("\nInclude in your paper with:");
-        for art in &artifacts {
-            if !art.preferred {
-                continue;
-            }
-            let name = art.tex_abs.file_name().unwrap().to_string_lossy();
-            eprintln!("  \\input{{generated/{name}}}");
-        }
     }
 
     Ok(())
-}
-
-/// Extract content between BEGIN/END fragment markers.
-fn extract_fragment(tex: &str) -> Option<&str> {
-    let start_marker = "% --- BEGIN ";
-    let end_marker = "% --- END ";
-    let start = tex.find(start_marker)?;
-    let end = tex.find(end_marker)?;
-    let end_line = tex[end..]
-        .find('\n')
-        .map(|i| end + i + 1)
-        .unwrap_or(tex.len());
-    Some(&tex[start..end_line])
-}
-
-/// Rewrite `\includegraphics{foo.pdf}` to `\includegraphics{<prefix>/foo.pdf}`.
-fn rewrite_includegraphics(fragment: &str, prefix: &str) -> String {
-    fragment
-        .lines()
-        .map(|line| {
-            if let Some(idx) = line.find("\\includegraphics")
-                && let Some(brace_start) = line[idx..].find('{')
-            {
-                let abs_start = idx + brace_start + 1;
-                if let Some(brace_end) = line[abs_start..].find('}') {
-                    let filename = &line[abs_start..abs_start + brace_end];
-                    // Only rewrite if it's a bare filename (no path separators).
-                    if !filename.contains('/') {
-                        return format!(
-                            "{}{{{prefix}/{filename}}}{}",
-                            &line[..abs_start - 1],
-                            &line[abs_start + brace_end + 1..]
-                        );
-                    }
-                }
-            }
-            line.to_string()
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
 }
 
 fn render_index(artifacts: &[Artifact], out_dir: &Path) -> Result<()> {

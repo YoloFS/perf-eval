@@ -4,19 +4,14 @@ use super::Artifact;
 use anyhow::{Context, Result};
 use std::path::Path;
 
-const CAPTION: &str = "Snapshot scalability. As the number of snapshots grows, do filesystems become slower? (OverlayFS fails at \\textasciitilde50 snapshots.)";
-const LABEL: &str = "fig:checkpoint-scaling";
-
 pub fn artifact_meta(paper_dir: &Path) -> Artifact {
-    let tex_path = paper_dir.join("checkpoint-scaling-figure.tex");
-    let plot_pdf = paper_dir.join("checkpoint-scaling-figure-plot.pdf");
+    let plot_pdf = paper_dir.join("checkpoint-scaling-figure.pdf");
     Artifact {
         group: None,
         title: "Checkpoint scaling".to_string(),
         preferred: true,
-        tex_path: format!("paper/{}", tex_path.file_name().unwrap().to_string_lossy()),
+        tex_path: String::new(),
         pdf_path: None,
-        tex_abs: tex_path,
         plot_pdfs: vec![plot_pdf],
     }
 }
@@ -96,7 +91,7 @@ pub fn render(out_dir: &Path, paper_dir: &Path) -> Result<Artifact> {
     }
 
     let py_path = paper_dir.join("checkpoint-scaling-figure.py");
-    let pdf_path = paper_dir.join("checkpoint-scaling-figure-plot.pdf");
+    let pdf_path = paper_dir.join("checkpoint-scaling-figure.pdf");
 
     let script = format!(
         r#"{preamble}
@@ -246,14 +241,15 @@ fig.legend(handles=handles, labels=labels, loc='upper center',
 # Shared x-axis label.
 fig.text(0.5, 0.02, 'Number of snapshots', ha='center', fontsize=8.5)
 
-fig.savefig('{pdf_path}', bbox_inches='tight', dpi=300)
+_out = os.path.join(os.path.dirname(os.path.abspath(__file__)), '{pdf_path}')
+fig.savefig(_out, bbox_inches='tight', dpi=300, metadata={{"CreationDate": None}})
 plt.close(fig)
 "#,
         preamble = preamble,
         create_data = create_lines.join("\n"),
         read_data = read_lines.join("\n"),
         commit_data = commit_lines.join("\n"),
-        pdf_path = pdf_path.display(),
+        pdf_path = pdf_path.file_name().unwrap().to_string_lossy(),
     );
 
     super::util::ensure_plot_style(paper_dir)?;
@@ -268,47 +264,17 @@ plt.close(fig)
         let stderr = String::from_utf8_lossy(&out.stderr);
         anyhow::bail!("matplotlib failed: {stderr}");
     }
-
-    let plot_pdf_name = pdf_path.file_name().unwrap().to_string_lossy();
-    let tex_path = paper_dir.join("checkpoint-scaling-figure.tex");
-    let tex = format!(
-        "\\PassOptionsToPackage{{activate=false}}{{microtype}}\n\
-         \\documentclass[sigplan,screen]{{acmart}}\n\
-         \\settopmatter{{printacmref=false,printfolios=false}}\n\
-         \\renewcommand\\footnotetextcopyrightpermission[1]{{}}\n\
-         \\usepackage{{graphicx}}\n\
-         \\begin{{document}}\n\
-         \\thispagestyle{{empty}}\n\
-         % --- BEGIN figure fragment (includable via \\input) ---\n\
-         \\begin{{figure}}[t]\n\
-         \\centering\n\
-         \\includegraphics{{{plot_pdf_name}}}\n\
-         \\caption{{{CAPTION}}}\n\
-         \\label{{{LABEL}}}\n\
-         \\end{{figure}}\n\
-         % --- END figure fragment ---\n\
-         \\end{{document}}\n",
-    );
-    std::fs::write(&tex_path, &tex).with_context(|| format!("writing {}", tex_path.display()))?;
-
-    let preview_pdf = match super::run_pdflatex_cropped(&tex_path, paper_dir) {
-        Ok(p) => Some(format!(
-            "paper/{}",
-            p.file_name().unwrap().to_string_lossy()
-        )),
-        Err(e) => {
-            eprintln!("  warning: checkpoint-scaling-figure: {e:#}");
-            Some(format!("paper/{plot_pdf_name}"))
-        }
-    };
+    eprintln!("Figure written to {}", pdf_path.display());
 
     Ok(Artifact {
         group: None,
         title: "Checkpoint scaling".to_string(),
         preferred: true,
-        tex_path: format!("paper/{}", tex_path.file_name().unwrap().to_string_lossy()),
-        pdf_path: preview_pdf,
-        tex_abs: tex_path,
+        tex_path: String::new(),
+        pdf_path: Some(format!(
+            "paper/{}",
+            pdf_path.file_name().unwrap().to_string_lossy()
+        )),
         plot_pdfs: vec![pdf_path],
     })
 }

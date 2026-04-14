@@ -6,9 +6,6 @@ use crate::report;
 use anyhow::{Context, Result};
 use std::path::Path;
 
-const CAPTION: &str = "Commit cost per file operation (\\textmu s/op) for 10\\,000 files. TODO.";
-const LABEL: &str = "fig:commit-time";
-
 const WORKLOADS: &[(&str, &str)] = &[
     ("write-files", "create"),
     ("overwrite-files", "overwrite"),
@@ -33,15 +30,13 @@ const BACKENDS: &[(&str, &str)] = &[
 const FILE_COUNT: f64 = 10_000.0;
 
 pub fn artifact_meta(paper_dir: &Path) -> Artifact {
-    let tex_path = paper_dir.join("commit-time-figure.tex");
-    let plot_pdf = paper_dir.join("commit-time-figure-plot.pdf");
+    let plot_pdf = paper_dir.join("commit-time-figure.pdf");
     Artifact {
         group: None,
         title: "Commit time per operation".to_string(),
         preferred: true,
-        tex_path: format!("paper/{}", tex_path.file_name().unwrap().to_string_lossy()),
+        tex_path: String::new(),
         pdf_path: None,
-        tex_abs: tex_path,
         plot_pdfs: vec![plot_pdf],
     }
 }
@@ -102,7 +97,7 @@ pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<Artifact> {
     }
 
     let py_path = paper_dir.join("commit-time-figure.py");
-    let pdf_path = paper_dir.join("commit-time-figure-plot.pdf");
+    let pdf_path = paper_dir.join("commit-time-figure.pdf");
 
     let backend_labels: Vec<&str> = BACKENDS.iter().map(|(_, l)| *l).collect();
     let backends_py: String = backend_labels
@@ -197,7 +192,8 @@ fig.legend(handles=legend_items, loc='upper center', bbox_to_anchor=(0.5, 0.995)
 
 fig.subplots_adjust(left=0.2, right=0.99, top=0.79, bottom=0.22)
 
-fig.savefig('{pdf_path}', bbox_inches='tight', dpi=300)
+_out = os.path.join(os.path.dirname(os.path.abspath(__file__)), '{pdf_path}')
+fig.savefig(_out, bbox_inches='tight', dpi=300, metadata={{"CreationDate": None}})
 plt.close(fig)
 "#,
         preamble = preamble,
@@ -212,7 +208,7 @@ plt.close(fig)
                 .join(", ")
         ),
         backends_py = backends_py,
-        pdf_path = pdf_path.display(),
+        pdf_path = pdf_path.file_name().unwrap().to_string_lossy(),
     );
 
     super::util::ensure_plot_style(paper_dir)?;
@@ -227,47 +223,17 @@ plt.close(fig)
         let stderr = String::from_utf8_lossy(&out.stderr);
         anyhow::bail!("matplotlib failed: {stderr}");
     }
-
-    let plot_pdf_name = pdf_path.file_name().unwrap().to_string_lossy();
-    let tex_path = paper_dir.join("commit-time-figure.tex");
-    let tex = format!(
-        "\\PassOptionsToPackage{{activate=false}}{{microtype}}\n\
-         \\documentclass[sigplan,screen]{{acmart}}\n\
-         \\settopmatter{{printacmref=false,printfolios=false}}\n\
-         \\renewcommand\\footnotetextcopyrightpermission[1]{{}}\n\
-         \\usepackage{{graphicx}}\n\
-         \\begin{{document}}\n\
-         \\thispagestyle{{empty}}\n\
-         % --- BEGIN figure fragment (includable via \\input) ---\n\
-         \\begin{{figure}}[t]\n\
-         \\centering\n\
-         \\includegraphics{{{plot_pdf_name}}}\n\
-         \\caption{{{CAPTION}}}\n\
-         \\label{{{LABEL}}}\n\
-         \\end{{figure}}\n\
-         % --- END figure fragment ---\n\
-         \\end{{document}}\n",
-    );
-    std::fs::write(&tex_path, &tex).with_context(|| format!("writing {}", tex_path.display()))?;
-
-    let preview_pdf = match super::run_pdflatex_cropped(&tex_path, paper_dir) {
-        Ok(p) => Some(format!(
-            "paper/{}",
-            p.file_name().unwrap().to_string_lossy()
-        )),
-        Err(e) => {
-            eprintln!("  warning: commit-time-figure: {e:#}");
-            Some(format!("paper/{plot_pdf_name}"))
-        }
-    };
+    eprintln!("Figure written to {}", pdf_path.display());
 
     Ok(Artifact {
         group: None,
         title: "Commit time per operation".to_string(),
         preferred: true,
-        tex_path: format!("paper/{}", tex_path.file_name().unwrap().to_string_lossy()),
-        pdf_path: preview_pdf,
-        tex_abs: tex_path,
+        tex_path: String::new(),
+        pdf_path: Some(format!(
+            "paper/{}",
+            pdf_path.file_name().unwrap().to_string_lossy()
+        )),
         plot_pdfs: vec![pdf_path],
     })
 }

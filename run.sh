@@ -5,7 +5,6 @@ set -euo pipefail
 
 BENCH_DIR="$(cd "$(dirname "$0")" && pwd)"
 AGFS_ROOT="$(cd "$BENCH_DIR/.." && pwd)"
-YOLO_BENCH="$BENCH_DIR/target/release/yolo-bench"
 
 mode="${1:-}"
 case "$mode" in
@@ -26,10 +25,9 @@ esac
 
 make -C "$AGFS_ROOT" install
 yolo reload
-(cd "$BENCH_DIR" && cargo build --release)
 
 for bench_flag in "${bench_flags[@]}"; do
-    "$YOLO_BENCH" "$bench_flag"
+    cargo run --release --manifest-path "$BENCH_DIR/Cargo.toml" -- "$bench_flag"
 done
 
 yolo unload
