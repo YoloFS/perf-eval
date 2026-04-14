@@ -60,8 +60,6 @@ pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<()> {
         }
     }
 
-    let mut baseline_lines = Vec::new();
-    baseline_lines.push("op,us_per_op".to_string());
     for &(op_label, wl_name) in NATIVE_BASELINES {
         let wl = results
             .workloads
@@ -76,20 +74,17 @@ pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<()> {
             }
             let avg_total_ms =
                 runs.iter().map(|r| r.total_ms as f64).sum::<f64>() / runs.len() as f64;
-            baseline_lines.push(format!(
-                "{op_label},{:.2}",
+            data_lines.push(format!(
+                "{op_label},Base,total,{:.2}",
                 avg_total_ms / FILE_COUNT * 1000.0
             ));
         }
     }
 
-    let data_path = paper_dir.join("commit-time.csv");
-    let baseline_path = paper_dir.join("commit-time-baseline.csv");
+    let data_path = paper_dir.join("commit.csv");
 
     std::fs::write(&data_path, data_lines.join("\n"))
         .with_context(|| format!("writing {}", data_path.display()))?;
-    std::fs::write(&baseline_path, baseline_lines.join("\n"))
-        .with_context(|| format!("writing {}", baseline_path.display()))?;
 
     eprintln!("CSV written to {}", data_path.display());
 

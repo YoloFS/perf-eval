@@ -7,7 +7,7 @@ import matplotlib.patches as mpatches
 import matplotlib.patheffects as pe
 import numpy as np
 from matplotlib.ticker import MaxNLocator
-from utils import (
+from plot_utils import (
     BACKEND_COLORS,
     NATIVE_LINE_KW,
     backend_legend_handle,
@@ -20,9 +20,9 @@ from utils import (
 
 def main():
     generated_dir = generated_dir_from_argv(sys.argv)
-    out_path = generated_dir / 'dev-workflow.pdf'
+    out_path = generated_dir / 'dev.pdf'
 
-    rows = read_csv_rows(generated_dir, 'dev-workflow.csv')
+    rows = read_csv_rows(generated_dir, 'dev.csv')
 
     facets = ['Worktree', 'Init. Build', 'Read', 'Edit', 'Incr. Build', 'Git']
     backends = ['YoloFS', 'OverlayFS']

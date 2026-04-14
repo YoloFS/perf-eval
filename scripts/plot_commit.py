@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import MaxNLocator
 from matplotlib.patches import Patch
-from utils import (
+from plot_utils import (
     NATIVE_LINE_KW,
     TABLEAU10,
     generated_dir_from_argv,
@@ -19,20 +19,20 @@ from utils import (
 def main():
     generated_dir = generated_dir_from_argv(sys.argv)
 
-    out_path = generated_dir / 'commit-time.pdf'
+    out_path = generated_dir / 'commit.pdf'
 
-    rows = read_csv_rows(generated_dir, 'commit-time.csv')
-
-    baseline = {}
-    for r in read_csv_rows(generated_dir, 'commit-time-baseline.csv'):
-        baseline[r['op']] = float(r['us_per_op'])
+    rows = read_csv_rows(generated_dir, 'commit.csv')
 
     ops = ['create', 'overwrite', 'rename', 'unlink']
     backends = ['YoloFS', 'OverlayFS', 'BranchFS']
 
     lookup = {}
+    baseline = {}
     for r in rows:
-        lookup[(r['op'], r['backend'], r['metric'])] = float(r['us_per_op'])
+        if r['backend'] == 'Base':
+            baseline[r['op']] = float(r['us_per_op'])
+        else:
+            lookup[(r['op'], r['backend'], r['metric'])] = float(r['us_per_op'])
 
     backend_colors = {
         'YoloFS': TABLEAU10['blue'],

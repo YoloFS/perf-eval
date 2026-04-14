@@ -97,7 +97,7 @@ pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<()> {
         }
     }
 
-    let csv_path = paper_dir.join("dev-workflow.csv");
+    let csv_path = paper_dir.join("dev.csv");
     std::fs::write(&csv_path, csv_lines.join("\n"))
         .with_context(|| format!("writing {}", csv_path.display()))?;
 

@@ -72,9 +72,9 @@ pub fn render(out_dir: &Path, paper_dir: &Path) -> Result<()> {
         }
     }
 
-    let create_path = paper_dir.join("checkpoint-scaling-create.csv");
-    let read_path = paper_dir.join("checkpoint-scaling-read.csv");
-    let commit_path = paper_dir.join("checkpoint-scaling-commit.csv");
+    let create_path = paper_dir.join("checkpoint-create.csv");
+    let read_path = paper_dir.join("checkpoint-read.csv");
+    let commit_path = paper_dir.join("checkpoint-commit.csv");
 
     std::fs::write(&create_path, create_lines.join("\n"))
         .with_context(|| format!("writing {}", create_path.display()))?;

@@ -2,7 +2,7 @@
 
 pub mod checkpoint;
 pub mod commit;
-pub mod dev_workflow;
+pub mod dev;
 pub mod ops_data;
 pub mod ops_meta;
 mod util;
@@ -51,13 +51,13 @@ pub fn install(results: &crate::BenchResults, out_dir: &Path, paper_path: &Path)
     ops_meta::render(results, &gen_dir)?;
     commit::render(results, &gen_dir)?;
     checkpoint::render(out_dir, &gen_dir)?;
-    dev_workflow::render(results, &gen_dir)?;
+    dev::render(results, &gen_dir)?;
 
     let plot_scripts = [
-        "ops_meta.py",
-        "commit.py",
-        "checkpoint.py",
-        "dev_workflow.py",
+        "plot_ops_meta.py",
+        "plot_commit.py",
+        "plot_checkpoint.py",
+        "plot_dev.py",
     ];
     for script in &plot_scripts {
         match run_plot_script(script, &gen_dir) {

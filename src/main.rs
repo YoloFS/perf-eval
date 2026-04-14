@@ -1449,7 +1449,7 @@ fn main() -> Result<()> {
                     paper::checkpoint::render(&out_dir, &generated_dir)?;
                 }
                 "dev-workflow" => {
-                    paper::dev_workflow::render(&results, &generated_dir)?;
+                    paper::dev::render(&results, &generated_dir)?;
                 }
                 _ => bail!(
                     "unknown paper artifact: {name}. Available: commit-time, meta-ops, fio-table, checkpoint-scaling, dev-workflow"

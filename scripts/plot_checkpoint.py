@@ -4,7 +4,7 @@ import sys
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator, FuncFormatter
-from utils import (
+from plot_utils import (
     BACKEND_COLORS,
     TABLEAU10,
     generated_dir_from_argv,
@@ -15,11 +15,11 @@ from utils import (
 
 def main():
     generated_dir = generated_dir_from_argv(sys.argv)
-    out_path = generated_dir / 'checkpoint-scaling.pdf'
+    out_path = generated_dir / 'checkpoint.pdf'
 
-    create_rows = read_csv_rows(generated_dir, 'checkpoint-scaling-create.csv')
-    read_rows = read_csv_rows(generated_dir, 'checkpoint-scaling-read.csv')
-    commit_rows = read_csv_rows(generated_dir, 'checkpoint-scaling-commit.csv')
+    create_rows = read_csv_rows(generated_dir, 'checkpoint-create.csv')
+    read_rows = read_csv_rows(generated_dir, 'checkpoint-read.csv')
+    commit_rows = read_csv_rows(generated_dir, 'checkpoint-commit.csv')
 
     plt.rcParams.update({'font.size': 8.5, 'axes.labelsize': 8.5, 'xtick.labelsize': 8.5,
                          'ytick.labelsize': 8.5, 'legend.fontsize': 7.5})
