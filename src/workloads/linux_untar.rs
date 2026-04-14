@@ -107,10 +107,7 @@ impl Workload for LinuxUntar {
     fn realistic_rules(&self, session_root: &Path) -> Vec<(String, Perm)> {
         vec![
             (session_root.to_string_lossy().into_owned(), Perm::Allow),
-            (
-                self.fixture_dir.to_string_lossy().into_owned(),
-                Perm::Ro,
-            ),
+            (self.fixture_dir.to_string_lossy().into_owned(), Perm::Ro),
         ]
     }
 

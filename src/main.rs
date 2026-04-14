@@ -284,6 +284,63 @@ struct BenchResults {
     workloads: Vec<WorkloadResult>,
 }
 
+#[derive(Clone, Debug)]
+struct OutputLayout {
+    root: PathBuf,
+}
+
+impl OutputLayout {
+    fn from_env(_env: &Env, timestamped: bool) -> Self {
+        let base = repo_root().join("bench-results");
+        let root = if timestamped {
+            let ts = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+            base.join(ts.to_string())
+        } else {
+            base
+        };
+        Self { root }
+    }
+
+    fn from_root(root: impl Into<PathBuf>) -> Self {
+        Self { root: root.into() }
+    }
+
+    fn root(&self) -> &Path {
+        &self.root
+    }
+
+    fn report_dir(&self) -> PathBuf {
+        self.root.join("report")
+    }
+
+    fn paper_dir(&self) -> PathBuf {
+        self.root.join("paper")
+    }
+
+    fn profiling_dir(&self) -> PathBuf {
+        self.root.join("profiling")
+    }
+
+    fn results_json(&self) -> PathBuf {
+        self.report_dir().join("results.json")
+    }
+
+    fn checkpoint_scaling_json(&self) -> PathBuf {
+        self.report_dir().join("checkpoint-scaling.json")
+    }
+
+    fn checkpoint_scaling_report(&self) -> PathBuf {
+        self.report_dir().join("report-checkpoint-scaling.html")
+    }
+
+    fn profile_dir(&self, workload_name: &str, backend_name: &str) -> PathBuf {
+        self.profiling_dir().join(workload_name).join(backend_name)
+    }
+}
+
 // ── Environment collection ────────────────────────────────────────────────────
 
 fn collect_env() -> Env {
@@ -559,7 +616,15 @@ pub(crate) fn repo_paths_changed_between(from_commit: &str, to_commit: &str) -> 
     }
 
     let status = Command::new("git")
-        .args(["diff", "--quiet", from_commit, to_commit, "--", "user", "kmod"])
+        .args([
+            "diff",
+            "--quiet",
+            from_commit,
+            to_commit,
+            "--",
+            "user",
+            "kmod",
+        ])
         .current_dir(repo_root())
         .status()
         .with_context(|| {
@@ -981,21 +1046,24 @@ fn repo_root() -> PathBuf {
         .to_path_buf()
 }
 
-fn results_dir(env: &Env, timestamped: bool) -> PathBuf {
-    let dir_name = match (&env.cloudlab_hardware, &env.cloudlab_cluster) {
-        (Some(hw), Some(cluster)) => format!("{hw}@{cluster}"),
-        _ => env.hostname.clone(),
-    };
-    let base = repo_root().join("bench-results").join(dir_name);
-    if timestamped {
-        let ts = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
-        base.join(ts.to_string())
-    } else {
-        base
-    }
+fn output_layout(env: &Env, timestamped: bool) -> OutputLayout {
+    OutputLayout::from_env(env, timestamped)
+}
+
+pub(crate) fn report_dir(out_dir: &Path) -> PathBuf {
+    OutputLayout::from_root(out_dir).report_dir()
+}
+
+pub(crate) fn paper_dir(out_dir: &Path) -> PathBuf {
+    OutputLayout::from_root(out_dir).paper_dir()
+}
+
+pub(crate) fn results_json_path(out_dir: &Path) -> PathBuf {
+    OutputLayout::from_root(out_dir).results_json()
+}
+
+pub(crate) fn checkpoint_scaling_json_path(out_dir: &Path) -> PathBuf {
+    OutputLayout::from_root(out_dir).checkpoint_scaling_json()
 }
 
 fn read_existing_results(json_path: &Path) -> Result<Option<BenchResults>> {
@@ -1100,7 +1168,7 @@ fn is_result_fresh(
 /// Remove a stale backend entry from results.json (e.g. when the combination
 /// is now skipped as unsupported but old data exists).
 fn remove_stale_backend(out_dir: &Path, workload_name: &str, backend_name: &str) -> Result<()> {
-    let json_path = out_dir.join("results.json");
+    let json_path = results_json_path(out_dir);
     if let Some(mut results) = read_existing_results(&json_path)? {
         let mut changed = false;
         for wl in &mut results.workloads {
@@ -1122,8 +1190,9 @@ fn remove_stale_backend(out_dir: &Path, workload_name: &str, backend_name: &str)
 
 /// Write results to disk, merging with any existing data. Returns the merged results.
 fn write_results(results: &BenchResults, out_dir: &Path) -> Result<BenchResults> {
-    fs::create_dir_all(out_dir).context("creating results dir")?;
-    let json_path = out_dir.join("results.json");
+    let report_dir = report_dir(out_dir);
+    fs::create_dir_all(&report_dir).context("creating report dir")?;
+    let json_path = results_json_path(out_dir);
 
     // Merge with existing results: replace workload entries that were re-run,
     // preserve workload entries that were not part of this run.
@@ -1156,10 +1225,7 @@ fn run_profile(env: &Env, workload_name: &str, backend_name: &str, bpftrace: boo
 
     workload.ensure_fixture()?;
 
-    let out_dir = results_dir(env, false)
-        .join("profiling")
-        .join(workload_name)
-        .join(backend_name);
+    let out_dir = output_layout(env, false).profile_dir(workload_name, backend_name);
 
     // Set up a single session, run the workload repeatedly under perf.
     // Using run_one() would create a fresh session (mount/populate/commit)
@@ -1306,7 +1372,7 @@ fn main() -> Result<()> {
             run_profile(&env, &wname, bname, bpftrace)?;
         }
         // Generate cross-backend comparison if multiple backends were profiled.
-        let prof_workload_dir = results_dir(&env, false).join("profiling").join(&wname);
+        let prof_workload_dir = output_layout(&env, false).profiling_dir().join(&wname);
         if prof_workload_dir.exists() {
             profiler::generate_comparison(&prof_workload_dir)?;
         }
@@ -1349,7 +1415,7 @@ fn main() -> Result<()> {
     }
 
     if let Some(Cmd::CheckpointScaling { backend, mode }) = cli.cmd {
-        let out_dir = results_dir(&env, false);
+        let out_dir = output_layout(&env, false).root().to_path_buf();
         run_checkpoint_scaling(&out_dir, backend.as_deref(), mode.as_deref())?;
         return Ok(());
     }
@@ -1366,8 +1432,8 @@ fn main() -> Result<()> {
     }
 
     if let Some(Cmd::InstallPaper { paper_dir }) = cli.cmd {
-        let out_dir = results_dir(&env, false);
-        let results_path = out_dir.join("results.json");
+        let out_dir = output_layout(&env, false).root().to_path_buf();
+        let results_path = results_json_path(&out_dir);
         let json = fs::read_to_string(&results_path)
             .with_context(|| format!("reading {}", results_path.display()))?;
         let results: BenchResults = serde_json::from_str(&json).context("parsing results.json")?;
@@ -1381,15 +1447,15 @@ fn main() -> Result<()> {
         workload,
     }) = cli.cmd
     {
-        let out_dir = results_dir(&env, false);
-        let results_path = out_dir.join("results.json");
+        let out_dir = output_layout(&env, false).root().to_path_buf();
+        let results_path = results_json_path(&out_dir);
         let json = fs::read_to_string(&results_path)
             .with_context(|| format!("reading {}", results_path.display()))?;
         let results: BenchResults = serde_json::from_str(&json).context("parsing results.json")?;
         if let Some(ref name) = workload {
             report::render_one(&results, name, &out_dir)?;
         } else if let Some(ref name) = paper {
-            let paper_dir = out_dir.join("paper");
+            let paper_dir = paper_dir(&out_dir);
             std::fs::create_dir_all(&paper_dir)?;
             match name.as_str() {
                 "commit-time" => {
@@ -1492,8 +1558,10 @@ fn main() -> Result<()> {
             .collect()
     };
 
-    let out_dir = results_dir(&env, cli.timestamped_results);
-    let json_path = out_dir.join("results.json");
+    let out_dir = output_layout(&env, cli.timestamped_results)
+        .root()
+        .to_path_buf();
+    let json_path = results_json_path(&out_dir);
 
     // Clean up leftover temp directories from previous crashed runs.
     cleanup_stale_tempdirs();
@@ -1713,7 +1781,9 @@ fn run_checkpoint_scaling(
         }
     }
 
-    let json_path = out_dir.join("checkpoint-scaling.json");
+    let report_root = report_dir(out_dir);
+    std::fs::create_dir_all(&report_root).context("creating report dir")?;
+    let json_path = checkpoint_scaling_json_path(out_dir);
     // Merge with existing results so filtered runs don't clobber others.
     let mut merged: Vec<CheckpointScalingResult> = if json_path.exists() {
         serde_json::from_str(&fs::read_to_string(&json_path)?).unwrap_or_default()
@@ -1760,7 +1830,8 @@ fn run_checkpoint_scaling(
     );
     html.push_str("</script></body></html>\n");
 
-    let html_path = out_dir.join("report-checkpoint-scaling.html");
+    std::fs::create_dir_all(&report_root).context("creating report dir")?;
+    let html_path = OutputLayout::from_root(out_dir).checkpoint_scaling_report();
     std::fs::write(&html_path, &html)?;
     eprintln!("Report written to {}", html_path.display());
 

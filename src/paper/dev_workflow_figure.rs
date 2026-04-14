@@ -41,11 +41,7 @@ const BACKENDS: &[(&str, &str)] = &[("yolo-realistic", "YoloFS"), ("overlayfs", 
 pub fn artifact_meta(paper_dir: &Path) -> Artifact {
     let plot_pdf = paper_dir.join("dev-workflow-figure.pdf");
     Artifact {
-        group: None,
-        title: "Developer workflow breakdown".to_string(),
         preferred: true,
-        tex_path: String::new(),
-        pdf_path: None,
         plot_pdfs: vec![plot_pdf],
     }
 }
@@ -110,168 +106,15 @@ pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<Artifact> {
         }
     }
 
-    let preamble = super::util::plot_preamble();
-    let py_path = paper_dir.join("dev-workflow-figure.py");
-    let pdf_path = paper_dir.join("dev-workflow-figure.pdf");
-    super::util::ensure_plot_style(paper_dir)?;
+    let csv_path = paper_dir.join("dev-workflow.csv");
+    std::fs::write(&csv_path, csv_lines.join("\n"))
+        .with_context(|| format!("writing {}", csv_path.display()))?;
 
-    let script = format!(
-        r#"{preamble}
-from io import StringIO
-import csv
-
-DATA = """\
-facet,backend,run_s,checkpoint_s,native_run_s,run_total_s,checkpoint_total_s,commit_s,native_total_s
-{data}
-"""
-
-rows = list(csv.DictReader(StringIO(DATA.strip())))
-facets = {facets}
-backends = {backends}
-colors = {{
-    'YoloFS': S.BACKEND_COLORS['YoloFS'],
-    'OverlayFS': S.BACKEND_COLORS['OverlayFS'],
-}}
-native_line_kw = dict(S.NATIVE_LINE_KW)
-native_line_kw['path_effects'] = [pe.withStroke(linewidth=1.8, foreground='white', alpha=0.45)]
-native_handle = S.native_legend_handle('Base')
-native_handle.set_path_effects(native_line_kw['path_effects'])
-
-plt.rcParams.update({{'font.size': 7.3, 'axes.labelsize': 7.3, 'xtick.labelsize': 7.3,
-                      'ytick.labelsize': 7.3, 'legend.fontsize': 7.3}})
-
-fig = plt.figure(figsize=(2.85, 1.82))
-gs = fig.add_gridspec(2, 4, width_ratios=[0.56, 0.56, 0.56, 0.82], wspace=0.42, hspace=0.42)
-axes = [
-    fig.add_subplot(gs[0, 0]),
-    fig.add_subplot(gs[0, 1]),
-    fig.add_subplot(gs[0, 2]),
-    fig.add_subplot(gs[1, 0]),
-    fig.add_subplot(gs[1, 1]),
-    fig.add_subplot(gs[1, 2]),
-]
-ax_total = fig.add_subplot(gs[:, 3])
-
-def facet_rows(name):
-    return [r for r in rows if r['facet'] == name]
-
-for idx, facet in enumerate(facets):
-    ax = axes[idx]
-    fr = facet_rows(facet)
-    x = np.array([0.0, 0.18])
-    run = [next((float(r['run_s']) for r in fr if r['backend'] == b), 0.0) for b in backends]
-    chk = [next((float(r['checkpoint_s']) for r in fr if r['backend'] == b), 0.0) for b in backends]
-    native_run = next((float(r['native_run_s']) for r in fr), 0.0)
-    for i, backend in enumerate(backends):
-        color = colors[backend]
-        ax.bar(x[i], run[i], color=color, edgecolor=color, linewidth=0.6, width=0.14)
-        ax.bar(x[i], chk[i], bottom=run[i], color='white', edgecolor=color, linewidth=0.6,
-               width=0.14)
-        ax.bar(x[i], chk[i], bottom=run[i], color='none', edgecolor=color, linewidth=0.0,
-               hatch='////', width=0.14, zorder=3)
-    ax.axhline(native_run, **native_line_kw)
-    ax.set_xticks([])
-    ymax = max(max((r + c) for r, c in zip(run, chk)), native_run, 0.0)
-    ax.set_ylim(0, ymax * 1.08 if ymax > 0 else 1.0)
-    ax.set_xlim(-0.14, 0.32)
-    ax.yaxis.set_major_locator(MaxNLocator(nbins=3))
-    ax.text(0.5, -0.095, facet, transform=ax.transAxes, ha='center', va='top',
-            fontsize=7.3, fontweight='bold')
-
-ax = ax_total
-x = np.array([0.0, 0.2])
-run_total = [next((float(r['run_total_s']) for r in rows if r['facet'] == facets[0] and r['backend'] == b), 0.0) for b in backends]
-commit = [next((float(r['commit_s']) for r in rows if r['facet'] == facets[0] and r['backend'] == b), 0.0) for b in backends]
-checkpoint_total = [next((float(r['checkpoint_total_s']) for r in rows if r['facet'] == facets[0] and r['backend'] == b), 0.0) for b in backends]
-native_total = next((float(r['native_total_s']) for r in rows if r['facet'] == facets[0]), 0.0)
-stack_base = np.array(run_total) + np.array(checkpoint_total)
-for i, backend in enumerate(backends):
-    color = colors[backend]
-    ax.bar(x[i], run_total[i], color=color, edgecolor=color, linewidth=0.6, width=0.14)
-    ax.bar(x[i], checkpoint_total[i], bottom=run_total[i], color='white', edgecolor=color, linewidth=0.6,
-           width=0.14)
-    ax.bar(x[i], checkpoint_total[i], bottom=run_total[i], color='none', edgecolor=color, linewidth=0.0,
-           hatch='////', width=0.14, zorder=3)
-    ax.bar(x[i], commit[i], bottom=stack_base[i], color='white', edgecolor=color, linewidth=0.6,
-           width=0.14)
-    ax.bar(x[i], commit[i], bottom=stack_base[i], color='none', edgecolor=color, linewidth=0.0,
-           hatch='....', width=0.14, zorder=3)
-ax.axhline(native_total, **native_line_kw)
-ax.set_xticks([])
-ax.set_ylim(bottom=0)
-ax.set_xlim(-0.14, 0.34)
-ax.yaxis.set_major_locator(MaxNLocator(nbins=4))
-
-for ax in axes + [ax_total]:
-    ax.tick_params(axis='x', length=0)
-    ax.tick_params(axis='y', length=2, pad=1)
-    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: '0' if abs(y) < 1e-12 else f'{{y:.2g}}'))
-
-legend_handles = [
-    native_handle,
-    S.backend_legend_handle('YoloFS'),
-    S.backend_legend_handle('OverlayFS'),
-    mpatches.Patch(facecolor='#666', edgecolor='#666', label='run'),
-    mpatches.Patch(facecolor='white', edgecolor='#666', hatch='////', label='snapshot'),
-    mpatches.Patch(facecolor='white', edgecolor='#666', hatch='....', label='commit'),
-]
-fig.legend(handles=legend_handles, loc='upper center', bbox_to_anchor=(0.5, 0.905),
-           ncol=6, handlelength=1.1, handletextpad=0.35, borderpad=0.15, columnspacing=0.55)
-fig.text(0.055, 0.46, 'Time (s)', rotation=90, va='center', ha='center', fontsize=8.5)
-fig.subplots_adjust(left=0.12, right=0.99, top=0.8, bottom=0.125)
-
-edit_bbox = axes[3].get_position()
-title_y = edit_bbox.y0 - 0.095 * edit_bbox.height
-total_bbox = ax_total.get_position()
-fig.text(total_bbox.x0 + total_bbox.width / 2, title_y, 'Total', ha='center', va='top',
-         fontsize=7.3, fontweight='bold')
-
-_out = os.path.join(os.path.dirname(os.path.abspath(__file__)), '{pdf_path}')
-fig.savefig(_out, bbox_inches='tight', dpi=300, metadata={{"CreationDate": None}})
-plt.close(fig)
-"#,
-        preamble = preamble,
-        data = csv_lines.join("\n"),
-        facets = format!(
-            "[{}]",
-            FACETS
-                .iter()
-                .map(|(name, _)| format!("'{}'", name))
-                .collect::<Vec<_>>()
-                .join(", ")
-        ),
-        backends = format!(
-            "[{}]",
-            BACKENDS
-                .iter()
-                .map(|(_, label)| format!("'{}'", label))
-                .collect::<Vec<_>>()
-                .join(", ")
-        ),
-        pdf_path = pdf_path.file_name().unwrap().to_string_lossy(),
-    );
-
-    std::fs::write(&py_path, &script).with_context(|| format!("writing {}", py_path.display()))?;
-    let out = std::process::Command::new("python3")
-        .arg(&py_path)
-        .output()
-        .with_context(|| format!("running {}", py_path.display()))?;
-    if !out.status.success() {
-        let stderr = String::from_utf8_lossy(&out.stderr);
-        anyhow::bail!("matplotlib failed: {stderr}");
-    }
-    eprintln!("Figure written to {}", pdf_path.display());
+    eprintln!("CSV written to {}", csv_path.display());
 
     Ok(Artifact {
-        group: None,
-        title: "Developer workflow breakdown".to_string(),
         preferred: true,
-        tex_path: String::new(),
-        pdf_path: Some(format!(
-            "paper/{}",
-            pdf_path.file_name().unwrap().to_string_lossy()
-        )),
-        plot_pdfs: vec![pdf_path],
+        plot_pdfs: vec![paper_dir.join("dev-workflow-figure.pdf")],
     })
 }
 

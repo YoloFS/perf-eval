@@ -1043,11 +1043,11 @@ pub fn generate_comparison(prof_workload_dir: &Path) -> Result<()> {
 }
 
 /// Look up the per-operation latency (µs) for a workload+backend from
-/// the most recent results.json. Returns None if not found.
+/// the most recent report/results.json. Returns None if not found.
 fn lookup_per_op_latency(out_dir: &Path, workload_name: &str, backend_name: &str) -> Option<f64> {
-    // Walk up from profiling/<workload>/<backend> to find results.json.
+    // Walk up from profiling/<workload>/<backend> to find the run root.
     let results_dir = out_dir.parent()?.parent()?.parent()?;
-    let json_path = results_dir.join("results.json");
+    let json_path = crate::results_json_path(results_dir);
     let raw = fs::read_to_string(&json_path).ok()?;
     let results: serde_json::Value = serde_json::from_str(&raw).ok()?;
     for wl in results["workloads"].as_array()? {

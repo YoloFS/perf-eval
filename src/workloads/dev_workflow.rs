@@ -184,10 +184,7 @@ impl Workload for DevWorkflow {
                 self.linux_fixture.to_string_lossy().into_owned(),
                 Perm::Allow,
             ),
-            (
-                self.fixture_dir.to_string_lossy().into_owned(),
-                Perm::Ro,
-            ),
+            (self.fixture_dir.to_string_lossy().into_owned(), Perm::Ro),
             ("/etc".to_string(), Perm::Ro),
             ("/etc/gitconfig".to_string(), Perm::Allow),
             ("/tmp".to_string(), Perm::Allow),

@@ -13,6 +13,12 @@ use plotly::layout::{Annotation, Axis, BarMode, Shape, ShapeLayer, ShapeLine, Sh
 use plotly::{Bar, Configuration, Layout, Plot, Scatter};
 use std::path::Path;
 
+fn report_path(out_dir: &Path, file_name: impl AsRef<str>) -> Result<std::path::PathBuf> {
+    let report_dir = crate::report_dir(out_dir);
+    std::fs::create_dir_all(&report_dir).context("creating report dir")?;
+    Ok(report_dir.join(file_name.as_ref()))
+}
+
 pub fn render(results: &BenchResults, out_dir: &Path) -> Result<()> {
     let current_repo_state = crate::read_repo_state().ok();
     let mut rendered_groups: std::collections::HashSet<String> = std::collections::HashSet::new();
@@ -199,7 +205,10 @@ fn render_macro_step_workload(
     }
     phase_plot.set_layout(phase_layout);
     phase_plot.set_configuration(Configuration::new().responsive(true).fill_frame(true));
-    let phase_path = out_dir.join(format!("report-{}-backend-phases.html", wl.workload));
+    let phase_path = report_path(
+        out_dir,
+        format!("report-{}-backend-phases.html", wl.workload),
+    )?;
     std::fs::write(&phase_path, phase_plot.to_html())
         .with_context(|| format!("writing {}", phase_path.display()))?;
 
@@ -313,7 +322,10 @@ fn render_macro_step_workload(
         plot.set_configuration(Configuration::new().responsive(true).fill_frame(true));
 
         let facet_slug = facet_label.to_lowercase().replace(' ', "-");
-        let facet_path = out_dir.join(format!("report-{}-{}.html", wl.workload, facet_slug));
+        let facet_path = report_path(
+            out_dir,
+            format!("report-{}-{}.html", wl.workload, facet_slug),
+        )?;
         std::fs::write(&facet_path, plot.to_html())
             .with_context(|| format!("writing {}", facet_path.display()))?;
     }
@@ -346,7 +358,7 @@ fn render_macro_step_workload(
     full_html.push_str("</div></body></html>");
     full_html = inject_workload_status(full_html, &status);
 
-    let html_path = out_dir.join(format!("report-{}.html", wl.workload));
+    let html_path = report_path(out_dir, format!("report-{}.html", wl.workload))?;
     std::fs::write(&html_path, &full_html)
         .with_context(|| format!("writing {}", html_path.display()))?;
     eprintln!("Report written to {}", html_path.display());
@@ -400,12 +412,13 @@ fn render_checkpoint_series_workload(
         plot.set_layout(layout);
         plot.set_configuration(Configuration::new().responsive(true).fill_frame(true));
 
-        let op_html_path = out_dir.join(format!("report-{}-{}.html", wl.workload, op_name));
+        let op_html_path =
+            report_path(out_dir, format!("report-{}-{}.html", wl.workload, op_name))?;
         std::fs::write(&op_html_path, plot.to_html())
             .with_context(|| format!("writing {}", op_html_path.display()))?;
     }
 
-    let html_path = out_dir.join(format!("report-{}.html", wl.workload));
+    let html_path = report_path(out_dir, format!("report-{}.html", wl.workload))?;
     let status = workload_staleness(wl, current_repo_state);
     let mut full_html = String::new();
     full_html.push_str("<!DOCTYPE html><html><head><meta charset=\"utf-8\">");
@@ -500,7 +513,7 @@ fn render_session_workload(
     plot.set_layout(layout);
     plot.set_configuration(Configuration::new().responsive(true).fill_frame(true));
 
-    let html_path = out_dir.join(format!("report-{}.html", wl.workload));
+    let html_path = report_path(out_dir, format!("report-{}.html", wl.workload))?;
     let status = workload_staleness(wl, current_repo_state);
     let mut full_html = plot.to_html();
     full_html = inject_workload_status(full_html, &status);
@@ -595,7 +608,7 @@ fn render_op_workload(
     plot.set_configuration(Configuration::new().responsive(true).fill_frame(true));
 
     // Write the plotly chart, then append a latency table.
-    let html_path = out_dir.join(format!("report-{}.html", wl.workload));
+    let html_path = report_path(out_dir, format!("report-{}.html", wl.workload))?;
     let mut full_html = plot.to_html();
     let status = workload_staleness(wl, current_repo_state);
 
@@ -757,7 +770,7 @@ fn render_op_mixed_workload(
     plot.set_layout(layout);
     plot.set_configuration(Configuration::new().responsive(true).fill_frame(true));
 
-    let html_path = out_dir.join(format!("report-{}.html", wl.workload));
+    let html_path = report_path(out_dir, format!("report-{}.html", wl.workload))?;
     let mut full_html = plot.to_html();
     let status = workload_staleness(wl, current_repo_state);
 
@@ -1631,7 +1644,7 @@ fn render_grouped_op_workloads(
     plot.set_layout(layout);
     plot.set_configuration(Configuration::new().responsive(true).fill_frame(true));
 
-    let html_path = out_dir.join(format!("report-{group}.html"));
+    let html_path = report_path(out_dir, format!("report-{group}.html"))?;
     let mut full_html = plot.to_html();
 
     // Staleness: use the first available source variant.
@@ -1817,7 +1830,7 @@ pub fn render_index(
             dirty_label(repo.kmod_dirty)
         ));
     }
-    html.push_str("<tr><td></td><td><a href=\"results.json\">results.json</a></td></tr>\n");
+    html.push_str("<tr><td>data</td><td><a href=\"results.json\">results.json</a></td></tr>\n");
     html.push_str("</table></div>\n");
 
     // For grouped workloads (e.g. "meta-append"), resolve to the first
@@ -1974,7 +1987,7 @@ pub fn render_index(
 
     html.push_str("</body></html>\n");
 
-    let index_path = out_dir.join("report.html");
+    let index_path = report_path(out_dir, "report.html")?;
     std::fs::write(&index_path, &html).context("writing index.html")?;
     eprintln!("Index written to {}", index_path.display());
     Ok(())

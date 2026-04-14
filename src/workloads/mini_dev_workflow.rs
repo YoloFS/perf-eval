@@ -192,10 +192,7 @@ impl Workload for MiniDevWorkflow {
         let mut rules = vec![
             (session_root.to_string_lossy().into_owned(), Perm::Allow),
             (self.repo_cache.to_string_lossy().into_owned(), Perm::Allow),
-            (
-                self.fixture_dir.to_string_lossy().into_owned(),
-                Perm::Ro,
-            ),
+            (self.fixture_dir.to_string_lossy().into_owned(), Perm::Ro),
             ("/etc".to_string(), Perm::Ro),
             ("/etc/gitconfig".to_string(), Perm::Allow),
             ("/tmp".to_string(), Perm::Allow),

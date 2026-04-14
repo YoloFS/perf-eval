@@ -32,11 +32,7 @@ pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<Artifact> {
     eprintln!("Table written to {}", tex_path.display());
 
     Ok(Artifact {
-        group: None,
-        title: "Data-op throughput summary (fio)".to_string(),
         preferred: true,
-        tex_path: format!("paper/{}", tex_path.file_name().unwrap().to_string_lossy()),
-        pdf_path: None,
         plot_pdfs: vec![],
     })
 }
@@ -44,11 +40,7 @@ pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<Artifact> {
 /// Return artifact metadata without rendering (for install-paper).
 pub fn artifact_meta(_paper_dir: &Path) -> Artifact {
     Artifact {
-        group: None,
-        title: "Data-op throughput summary (fio)".to_string(),
         preferred: true,
-        tex_path: format!("paper/op-data-summary.tex"),
-        pdf_path: None,
         plot_pdfs: vec![],
     }
 }
