@@ -1,6 +1,7 @@
 use crate::backend::{self, Backend, CheckpointController, CheckpointOutcome};
 use crate::workload::{CacheMode, IterResult, Workload};
 use anyhow::{Context, Result, bail};
+use nix::libc;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::time::Instant;

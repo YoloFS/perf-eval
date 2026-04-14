@@ -4,7 +4,6 @@
 //! Within each subplot, x-axis = source (base, stage, snapshot),
 //! bars colored by backend. Legend identifies backends.
 
-use super::Artifact;
 use super::util::backend_display_name;
 use crate::BenchResults;
 use crate::report;
@@ -45,26 +44,14 @@ const OPS: &[(&str, &str)] = &[
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
-pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<Vec<Artifact>> {
+pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<()> {
     let data_csv = build_data_csv(results);
     let csv_path = paper_dir.join("meta-ops.csv");
     std::fs::write(&csv_path, &data_csv)
         .with_context(|| format!("writing {}", csv_path.display()))?;
     eprintln!("CSV written to {}", csv_path.display());
 
-    Ok(vec![Artifact {
-        preferred: true,
-        plot_pdfs: vec![paper_dir.join("meta-ops-capped.pdf")],
-    }])
-}
-
-/// Return artifact metadata without rendering (for install-paper).
-pub fn artifact_metas(paper_dir: &Path) -> Vec<Artifact> {
-    let plot_pdf = paper_dir.join("meta-ops-capped.pdf");
-    vec![Artifact {
-        preferred: true,
-        plot_pdfs: vec![plot_pdf],
-    }]
+    Ok(())
 }
 
 // ── Data collection ───────────────────────────────────────────────────────

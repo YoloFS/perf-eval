@@ -2,7 +2,8 @@
 //
 // Usage:
 //   yolo-bench [--workload <name> ...] [--backend <name>] [--verbose] [--timestamped-results]
-//   yolo-bench rerender
+//   yolo-bench report
+//   yolo-bench paper
 //   yolo-bench exec-workload --name <name> --dest <path>
 
 mod backend;
@@ -88,17 +89,21 @@ enum OpGroup {
 
 #[derive(Subcommand)]
 enum Cmd {
-    /// Regenerate the HTML report from existing results JSON without re-running benchmarks
-    Rerender {
-        /// Only regenerate paper artifacts (no Plotly HTML workload/index pages)
-        #[arg(long, conflicts_with_all = ["paper", "workload"])]
-        paper_only: bool,
-        /// Regenerate a single paper artifact by name (e.g. "commit-time", "meta-ops", "fio-table", "dev-workflow")
-        #[arg(long, conflicts_with_all = ["paper_only", "workload"])]
-        paper: Option<String>,
-        /// Regenerate a single HTML workload report (and refresh the index)
-        #[arg(long, conflicts_with_all = ["paper_only", "paper"])]
+    /// Generate HTML reports from existing results JSON
+    Report {
+        /// Results root (default: bench-results)
+        path: Option<PathBuf>,
+        /// Generate a single HTML workload report (and refresh the index)
+        #[arg(long)]
         workload: Option<String>,
+    },
+    /// Generate paper artifacts from existing results JSON
+    Paper {
+        /// Paper output path (default: repo_root/paper/generated)
+        path: Option<PathBuf>,
+        /// Generate a single paper artifact by name
+        #[arg(long)]
+        artifact: Option<String>,
     },
     /// List available workloads and backends
     List,
@@ -136,12 +141,6 @@ enum Cmd {
         /// Output PNG path (default: diff-<stem>.png in current dir)
         #[arg(long)]
         output: Option<PathBuf>,
-    },
-    /// Install preferred paper artifacts (tables + figures) into the paper repo
-    InstallPaper {
-        /// Path to the paper repository root (default: ../YoloFS-paper)
-        #[arg(long, default_value = "paper")]
-        paper_dir: PathBuf,
     },
     /// Run a workload at a given path (used internally by all backends)
     ExecWorkload {
@@ -316,10 +315,6 @@ impl OutputLayout {
         self.root.join("report")
     }
 
-    fn paper_dir(&self) -> PathBuf {
-        self.root.join("paper")
-    }
-
     fn profiling_dir(&self) -> PathBuf {
         self.root.join("profiling")
     }
@@ -333,7 +328,7 @@ impl OutputLayout {
     }
 
     fn checkpoint_scaling_report(&self) -> PathBuf {
-        self.report_dir().join("report-checkpoint-scaling.html")
+        self.report_dir().join("checkpoint-scaling.html")
     }
 
     fn profile_dir(&self, workload_name: &str, backend_name: &str) -> PathBuf {
@@ -1054,8 +1049,8 @@ pub(crate) fn report_dir(out_dir: &Path) -> PathBuf {
     OutputLayout::from_root(out_dir).report_dir()
 }
 
-pub(crate) fn paper_dir(out_dir: &Path) -> PathBuf {
-    OutputLayout::from_root(out_dir).paper_dir()
+pub(crate) fn default_paper_output_dir() -> PathBuf {
+    repo_root().join("paper").join("generated")
 }
 
 pub(crate) fn results_json_path(out_dir: &Path) -> PathBuf {
@@ -1431,54 +1426,50 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    if let Some(Cmd::InstallPaper { paper_dir }) = cli.cmd {
+    if let Some(Cmd::Paper { path, artifact }) = cli.cmd {
         let out_dir = output_layout(&env, false).root().to_path_buf();
         let results_path = results_json_path(&out_dir);
         let json = fs::read_to_string(&results_path)
             .with_context(|| format!("reading {}", results_path.display()))?;
         let results: BenchResults = serde_json::from_str(&json).context("parsing results.json")?;
-        paper::install(&results, &out_dir, &paper_dir)?;
+        if let Some(ref name) = artifact {
+            let generated_dir = path.unwrap_or_else(default_paper_output_dir);
+            std::fs::create_dir_all(&generated_dir)?;
+            match name.as_str() {
+                "commit-time" => {
+                    paper::commit_time_figure::render(&results, &generated_dir)?;
+                }
+                "meta-ops" => {
+                    paper::meta_ops_figure::render(&results, &generated_dir)?;
+                }
+                "fio-table" => {
+                    paper::fio_data_table::render(&results, &generated_dir)?;
+                }
+                "checkpoint-scaling" => {
+                    paper::checkpoint_scaling_figure::render(&out_dir, &generated_dir)?;
+                }
+                "dev-workflow" => {
+                    paper::dev_workflow_figure::render(&results, &generated_dir)?;
+                }
+                _ => bail!(
+                    "unknown paper artifact: {name}. Available: commit-time, meta-ops, fio-table, checkpoint-scaling, dev-workflow"
+                ),
+            }
+        } else {
+            let paper_path = path.unwrap_or_else(default_paper_output_dir);
+            paper::install(&results, &out_dir, &paper_path)?;
+        }
         return Ok(());
     }
 
-    if let Some(Cmd::Rerender {
-        paper_only,
-        paper,
-        workload,
-    }) = cli.cmd
-    {
-        let out_dir = output_layout(&env, false).root().to_path_buf();
+    if let Some(Cmd::Report { path, workload }) = cli.cmd {
+        let out_dir = path.unwrap_or_else(|| output_layout(&env, false).root().to_path_buf());
         let results_path = results_json_path(&out_dir);
         let json = fs::read_to_string(&results_path)
             .with_context(|| format!("reading {}", results_path.display()))?;
         let results: BenchResults = serde_json::from_str(&json).context("parsing results.json")?;
         if let Some(ref name) = workload {
             report::render_one(&results, name, &out_dir)?;
-        } else if let Some(ref name) = paper {
-            let paper_dir = paper_dir(&out_dir);
-            std::fs::create_dir_all(&paper_dir)?;
-            match name.as_str() {
-                "commit-time" => {
-                    paper::commit_time_figure::render(&results, &paper_dir)?;
-                }
-                "meta-ops" => {
-                    paper::meta_ops_figure::render(&results, &paper_dir)?;
-                }
-                "fio-table" => {
-                    paper::fio_data_table::render(&results, &paper_dir)?;
-                }
-                "checkpoint-scaling" => {
-                    paper::checkpoint_scaling_figure::render(&out_dir, &paper_dir)?;
-                }
-                "dev-workflow" => {
-                    paper::dev_workflow_figure::render(&results, &paper_dir)?;
-                }
-                _ => bail!(
-                    "unknown paper artifact: {name}. Available: commit-time, meta-ops, fio-table, checkpoint-scaling, dev-workflow"
-                ),
-            }
-        } else if paper_only {
-            report::render_paper_only(&results, &out_dir)?;
         } else {
             report::render(&results, &out_dir)?;
         }

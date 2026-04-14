@@ -1,6 +1,5 @@
 //! Publication figure: commit time per operation (session microbenchmarks).
 
-use super::Artifact;
 use crate::BenchResults;
 use crate::report;
 use anyhow::{Context, Result};
@@ -29,15 +28,7 @@ const BACKENDS: &[(&str, &str)] = &[
 
 const FILE_COUNT: f64 = 10_000.0;
 
-pub fn artifact_meta(paper_dir: &Path) -> Artifact {
-    let plot_pdf = paper_dir.join("commit-time-figure.pdf");
-    Artifact {
-        preferred: true,
-        plot_pdfs: vec![plot_pdf],
-    }
-}
-
-pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<Artifact> {
+pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<()> {
     // Collect data: op,backend,metric,us_per_op
     let mut data_lines = Vec::new();
     data_lines.push("op,backend,metric,us_per_op".to_string());
@@ -102,8 +93,5 @@ pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<Artifact> {
 
     eprintln!("CSV written to {}", data_path.display());
 
-    Ok(Artifact {
-        preferred: true,
-        plot_pdfs: vec![paper_dir.join("commit-time-figure.pdf")],
-    })
+    Ok(())
 }

@@ -35,13 +35,8 @@ pub fn render(results: &BenchResults, out_dir: &Path) -> Result<()> {
             render_workload(wl, results, out_dir, current_repo_state.as_ref())?;
         }
     }
-    crate::paper::render(results, out_dir)?;
     render_index(results, out_dir, current_repo_state.as_ref())?;
     Ok(())
-}
-
-pub fn render_paper_only(results: &BenchResults, out_dir: &Path) -> Result<()> {
-    crate::paper::render(results, out_dir)
 }
 
 pub fn render_one(results: &BenchResults, workload_name: &str, out_dir: &Path) -> Result<()> {
@@ -205,10 +200,7 @@ fn render_macro_step_workload(
     }
     phase_plot.set_layout(phase_layout);
     phase_plot.set_configuration(Configuration::new().responsive(true).fill_frame(true));
-    let phase_path = report_path(
-        out_dir,
-        format!("report-{}-backend-phases.html", wl.workload),
-    )?;
+    let phase_path = report_path(out_dir, format!("{}-backend-phases.html", wl.workload))?;
     std::fs::write(&phase_path, phase_plot.to_html())
         .with_context(|| format!("writing {}", phase_path.display()))?;
 
@@ -322,10 +314,7 @@ fn render_macro_step_workload(
         plot.set_configuration(Configuration::new().responsive(true).fill_frame(true));
 
         let facet_slug = facet_label.to_lowercase().replace(' ', "-");
-        let facet_path = report_path(
-            out_dir,
-            format!("report-{}-{}.html", wl.workload, facet_slug),
-        )?;
+        let facet_path = report_path(out_dir, format!("{}-{}.html", wl.workload, facet_slug))?;
         std::fs::write(&facet_path, plot.to_html())
             .with_context(|| format!("writing {}", facet_path.display()))?;
     }
@@ -345,20 +334,20 @@ fn render_macro_step_workload(
     );
     full_html.push_str("<div class=\"grid\">");
     full_html.push_str(&format!(
-        "<iframe src=\"report-{}-backend-phases.html\"></iframe>",
+        "<iframe src=\"{}-backend-phases.html\"></iframe>",
         wl.workload
     ));
     for (facet_label, _) in facets {
         let facet_slug = facet_label.to_lowercase().replace(' ', "-");
         full_html.push_str(&format!(
-            "<iframe src=\"report-{}-{}.html\"></iframe>",
+            "<iframe src=\"{}-{}.html\"></iframe>",
             wl.workload, facet_slug
         ));
     }
     full_html.push_str("</div></body></html>");
     full_html = inject_workload_status(full_html, &status);
 
-    let html_path = report_path(out_dir, format!("report-{}.html", wl.workload))?;
+    let html_path = report_path(out_dir, format!("{}.html", wl.workload))?;
     std::fs::write(&html_path, &full_html)
         .with_context(|| format!("writing {}", html_path.display()))?;
     eprintln!("Report written to {}", html_path.display());
@@ -412,13 +401,12 @@ fn render_checkpoint_series_workload(
         plot.set_layout(layout);
         plot.set_configuration(Configuration::new().responsive(true).fill_frame(true));
 
-        let op_html_path =
-            report_path(out_dir, format!("report-{}-{}.html", wl.workload, op_name))?;
+        let op_html_path = report_path(out_dir, format!("{}-{}.html", wl.workload, op_name))?;
         std::fs::write(&op_html_path, plot.to_html())
             .with_context(|| format!("writing {}", op_html_path.display()))?;
     }
 
-    let html_path = report_path(out_dir, format!("report-{}.html", wl.workload))?;
+    let html_path = report_path(out_dir, format!("{}.html", wl.workload))?;
     let status = workload_staleness(wl, current_repo_state);
     let mut full_html = String::new();
     full_html.push_str("<!DOCTYPE html><html><head><meta charset=\"utf-8\">");
@@ -434,7 +422,7 @@ fn render_checkpoint_series_workload(
     full_html.push_str("<div class=\"grid\">");
     for (op_name, _) in &op_defs {
         full_html.push_str(&format!(
-            "<iframe src=\"report-{}-{}.html\"></iframe>",
+            "<iframe src=\"{}-{}.html\"></iframe>",
             wl.workload, op_name
         ));
     }
@@ -513,7 +501,7 @@ fn render_session_workload(
     plot.set_layout(layout);
     plot.set_configuration(Configuration::new().responsive(true).fill_frame(true));
 
-    let html_path = report_path(out_dir, format!("report-{}.html", wl.workload))?;
+    let html_path = report_path(out_dir, format!("{}.html", wl.workload))?;
     let status = workload_staleness(wl, current_repo_state);
     let mut full_html = plot.to_html();
     full_html = inject_workload_status(full_html, &status);
@@ -608,7 +596,7 @@ fn render_op_workload(
     plot.set_configuration(Configuration::new().responsive(true).fill_frame(true));
 
     // Write the plotly chart, then append a latency table.
-    let html_path = report_path(out_dir, format!("report-{}.html", wl.workload))?;
+    let html_path = report_path(out_dir, format!("{}.html", wl.workload))?;
     let mut full_html = plot.to_html();
     let status = workload_staleness(wl, current_repo_state);
 
@@ -770,7 +758,7 @@ fn render_op_mixed_workload(
     plot.set_layout(layout);
     plot.set_configuration(Configuration::new().responsive(true).fill_frame(true));
 
-    let html_path = report_path(out_dir, format!("report-{}.html", wl.workload))?;
+    let html_path = report_path(out_dir, format!("{}.html", wl.workload))?;
     let mut full_html = plot.to_html();
     let status = workload_staleness(wl, current_repo_state);
 
@@ -1644,7 +1632,7 @@ fn render_grouped_op_workloads(
     plot.set_layout(layout);
     plot.set_configuration(Configuration::new().responsive(true).fill_frame(true));
 
-    let html_path = report_path(out_dir, format!("report-{group}.html"))?;
+    let html_path = report_path(out_dir, format!("{group}.html"))?;
     let mut full_html = plot.to_html();
 
     // Staleness: use the first available source variant.
@@ -1928,7 +1916,7 @@ pub fn render_index(
                 <div class=\"card-meta\"><span class=\"{badge_class}\">{status}</span>{freshness_html}</div>\
                 </div>\
                 {detail_html}\
-                <iframe src=\"report-{name}.html\"></iframe>\
+                <iframe src=\"{name}.html\"></iframe>\
                 </div>\n",
                 hover = hover_detail
                     .map(|d| escape_html(&d.summary))
@@ -1987,7 +1975,7 @@ pub fn render_index(
 
     html.push_str("</body></html>\n");
 
-    let index_path = report_path(out_dir, "report.html")?;
+    let index_path = report_path(out_dir, "index.html")?;
     std::fs::write(&index_path, &html).context("writing index.html")?;
     eprintln!("Index written to {}", index_path.display());
     Ok(())

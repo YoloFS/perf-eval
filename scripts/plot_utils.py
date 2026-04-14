@@ -1,15 +1,36 @@
-"""Shared plot style for yolo-bench paper figures.
+"""Shared helpers and style for yolo-bench paper plot scripts."""
 
-Provides consistent fonts, colors, sizes, and helpers across all figures.
-"""
+from pathlib import Path
+import csv
+import sys
+import os
+
 import matplotlib
+
 matplotlib.use('Agg')
 import matplotlib.font_manager as fm
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as pe
-import os
 
-# ── Font setup: Linux Libertine to match acmart ──
+
+def generated_dir_from_argv(argv: list[str]) -> Path:
+    if len(argv) < 2:
+        print(f"Usage: {argv[0]} <generated-dir>", file=sys.stderr)
+        sys.exit(1)
+    return Path(argv[1])
+
+
+def read_csv_rows(generated_dir: Path, name: str):
+    with (generated_dir / name).open() as f:
+        return list(csv.DictReader(f))
+
+
+def save_figure(fig, out_path: Path):
+    fig.savefig(out_path, bbox_inches='tight', dpi=300, metadata={"CreationDate": None})
+    plt.close(fig)
+    print(f"Figure written to {out_path}", file=sys.stderr)
+
+
 _libertine_dir = '/usr/share/fonts/opentype/linux-libertine'
 if os.path.isdir(_libertine_dir):
     for _f in fm.findSystemFonts(fontpaths=[_libertine_dir]):
@@ -18,7 +39,6 @@ if os.path.isdir(_libertine_dir):
 plt.rcParams.update({
     'font.family': 'serif',
     'font.serif': ['Linux Libertine O'],
-    # Sizes compensate for ~2x shrink (14" figure -> ~6.5" \textwidth).
     'font.size': 12,
     'axes.titlesize': 13,
     'axes.labelsize': 12,
@@ -30,51 +50,46 @@ plt.rcParams.update({
     'axes.spines.right': False,
 })
 
-# ── Tableau-10 palette ──
 TABLEAU10 = {
-    'blue':   '#4e79a7',
+    'blue': '#4e79a7',
     'orange': '#f28e2c',
-    'red':    '#e15759',
-    'teal':   '#76b7b2',
-    'green':  '#59a14f',
+    'red': '#e15759',
+    'teal': '#76b7b2',
+    'green': '#59a14f',
     'yellow': '#edc949',
     'purple': '#af7aa1',
-    'pink':   '#ff9da7',
-    'brown':  '#9c755f',
-    'gray':   '#bab0ab',
+    'pink': '#ff9da7',
+    'brown': '#9c755f',
+    'gray': '#bab0ab',
 }
 
-# ── Backend colors (consistent across all figures) ──
 BACKEND_COLORS = {
-    'YoloFS (no perm)': '#a0c8e2',   # Tableau-20 light blue
-    'YoloFS':           '#4e79a7',   # Tableau blue
-    'OverlayFS':      '#59a14f',   # Tableau green
-    'BranchFS':       '#f28e2c',   # Tableau orange
+    'YoloFS (no perm)': '#a0c8e2',
+    'YoloFS': '#4e79a7',
+    'OverlayFS': '#59a14f',
+    'BranchFS': '#f28e2c',
 }
 NATIVE_COLOR = 'black'
-
-# Backends whose bars are never capped or broken out.
 UNCAPPABLE = {'OverlayFS'}
 
-# ── Base baseline drawing ──
 NATIVE_LINE_KW = dict(
     color=NATIVE_COLOR, linewidth=1.0, linestyle='-', zorder=5,
     path_effects=[pe.withStroke(linewidth=3.0, foreground='white', alpha=0.5)],
 )
 
-# ── Helpers ──
 
 def fmt_lat(v):
-    """Format a latency value for annotation labels."""
     if v >= 1_000_000:
         return f'{v/1_000_000:.0f}s'
     if v >= 1000:
         return f'{v/1000:.0f}ms'
     return f'{v:.0f}'
 
+
 def native_legend_handle(label='Base'):
     import matplotlib.lines as mlines
     return mlines.Line2D([], [], label=label, **NATIVE_LINE_KW)
+
 
 def backend_legend_handle(name):
     import matplotlib.patches as mpatches

@@ -1,6 +1,5 @@
 //! Publication table: fio data-operation throughput summary.
 
-use super::Artifact;
 use super::util::{backend_display_name, latex_escape};
 use crate::BenchResults;
 use crate::workload::WorkloadKind;
@@ -24,25 +23,14 @@ const TABLEAU_COLOR_DEFS: &str = "\
 \\definecolor{TableauTeal}{HTML}{76B7B2}\n\
 \\definecolor{TableauRed}{HTML}{E15759}\n";
 
-pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<Artifact> {
+pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<()> {
     let tex_path = paper_dir.join("op-data-summary.tex");
 
     let tex = build_tex(results)?;
     std::fs::write(&tex_path, &tex).with_context(|| format!("writing {}", tex_path.display()))?;
     eprintln!("Table written to {}", tex_path.display());
 
-    Ok(Artifact {
-        preferred: true,
-        plot_pdfs: vec![],
-    })
-}
-
-/// Return artifact metadata without rendering (for install-paper).
-pub fn artifact_meta(_paper_dir: &Path) -> Artifact {
-    Artifact {
-        preferred: true,
-        plot_pdfs: vec![],
-    }
+    Ok(())
 }
 
 // ── Internal ─────────────────────────────────────────────────────────────────

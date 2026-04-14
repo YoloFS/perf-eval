@@ -1,6 +1,5 @@
 //! Publication figure: developer workflow phase breakdown.
 
-use super::Artifact;
 use crate::BenchResults;
 use anyhow::{Context, Result};
 use std::path::Path;
@@ -38,15 +37,7 @@ const FACETS: &[(&str, &[&str])] = &[
 
 const BACKENDS: &[(&str, &str)] = &[("yolo-realistic", "YoloFS"), ("overlayfs", "OverlayFS")];
 
-pub fn artifact_meta(paper_dir: &Path) -> Artifact {
-    let plot_pdf = paper_dir.join("dev-workflow-figure.pdf");
-    Artifact {
-        preferred: true,
-        plot_pdfs: vec![plot_pdf],
-    }
-}
-
-pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<Artifact> {
+pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<()> {
     let wl = results
         .workloads
         .iter()
@@ -112,10 +103,7 @@ pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<Artifact> {
 
     eprintln!("CSV written to {}", csv_path.display());
 
-    Ok(Artifact {
-        preferred: true,
-        plot_pdfs: vec![paper_dir.join("dev-workflow-figure.pdf")],
-    })
+    Ok(())
 }
 
 fn sum_categories(backend: &crate::BackendResult, categories: &[&str], checkpoints: bool) -> f64 {

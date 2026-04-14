@@ -1,18 +1,9 @@
 //! Publication figure: checkpoint depth scaling (split create/read/status/commit latency).
 
-use super::Artifact;
 use anyhow::{Context, Result};
 use std::path::Path;
 
-pub fn artifact_meta(paper_dir: &Path) -> Artifact {
-    let plot_pdf = paper_dir.join("checkpoint-scaling-figure.pdf");
-    Artifact {
-        preferred: true,
-        plot_pdfs: vec![plot_pdf],
-    }
-}
-
-pub fn render(out_dir: &Path, paper_dir: &Path) -> Result<Artifact> {
+pub fn render(out_dir: &Path, paper_dir: &Path) -> Result<()> {
     let json_path = crate::checkpoint_scaling_json_path(out_dir);
     if !json_path.exists() {
         anyhow::bail!(
@@ -92,10 +83,9 @@ pub fn render(out_dir: &Path, paper_dir: &Path) -> Result<Artifact> {
     std::fs::write(&commit_path, commit_lines.join("\n"))
         .with_context(|| format!("writing {}", commit_path.display()))?;
 
-    eprintln!("CSV written to {}", paper_dir.display());
+    eprintln!("CSV written to {}", create_path.display());
+    eprintln!("CSV written to {}", read_path.display());
+    eprintln!("CSV written to {}", commit_path.display());
 
-    Ok(Artifact {
-        preferred: true,
-        plot_pdfs: vec![paper_dir.join("checkpoint-scaling-figure.pdf")],
-    })
+    Ok(())
 }
