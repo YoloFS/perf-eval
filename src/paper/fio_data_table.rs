@@ -10,7 +10,7 @@ use std::path::Path;
 /// Table caption for the float environment.
 const CAPTION: &str = "Single-threaded I/O throughput on a 1 GB staged file with 4 KB I/O requests compared with the base Ext4 filesystem.";
 /// LaTeX label for cross-referencing.
-const LABEL: &str = "tab:op-data";
+const LABEL: &str = "tab:ops-data";
 const TABLEAU_COLOR_DEFS: &str = "\
 \\definecolor{TableauBlue}{HTML}{4E79A7}\n\
 \\definecolor{TableauOrange}{HTML}{F28E2C}\n\
@@ -24,7 +24,7 @@ const TABLEAU_COLOR_DEFS: &str = "\
 \\definecolor{TableauRed}{HTML}{E15759}\n";
 
 pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<()> {
-    let tex_path = paper_dir.join("op-data-summary.tex");
+    let tex_path = paper_dir.join("ops-data.tex");
 
     let tex = build_tex(results)?;
     std::fs::write(&tex_path, &tex).with_context(|| format!("writing {}", tex_path.display()))?;

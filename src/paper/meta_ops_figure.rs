@@ -46,7 +46,7 @@ const OPS: &[(&str, &str)] = &[
 
 pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<()> {
     let data_csv = build_data_csv(results);
-    let csv_path = paper_dir.join("meta-ops.csv");
+    let csv_path = paper_dir.join("ops-meta.csv");
     std::fs::write(&csv_path, &data_csv)
         .with_context(|| format!("writing {}", csv_path.display()))?;
     eprintln!("CSV written to {}", csv_path.display());

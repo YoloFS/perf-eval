@@ -23,8 +23,8 @@ CAP_FACTOR = 5.0
 
 def main():
     generated_dir = generated_dir_from_argv(sys.argv)
-    out_path = generated_dir / 'meta-ops.pdf'
-    rows = read_csv_rows(generated_dir, 'meta-ops.csv')
+    out_path = generated_dir / 'ops-meta.pdf'
+    rows = read_csv_rows(generated_dir, 'ops-meta.csv')
 
     ops = ['create', 'open', 'stat', 'readdir', 'append', 'rename', 'unlink']
     bar_backends = ['YoloFS (no perm)', 'YoloFS', 'OverlayFS', 'BranchFS']
