@@ -24,47 +24,18 @@ it against alternative staging/sandboxing approaches.
 
 ### Publication artifacts
 
-The paper pipeline can emit a publication-oriented **data-op (fio)** summary
-table under `../paper/generated/`:
+`yolo-bench paper` writes paper-oriented outputs to `../paper/generated/`:
 
-- `ops-data.tex` — compact LaTeX table source,
-- `fio.pdf` — compiled table PDF (if `pdflatex` is available),
-- `fio.svg` — vector SVG rendered from the PDF (if `pdftocairo`
-  is available).
+- `ops-data.tex` — LaTeX source for the data-op (fio) summary table,
+- `fio.pdf` / `fio.svg` — compiled artifacts (if `pdflatex` /
+  `pdftocairo` are available).
 
-The table reports throughput in MB/s and compares each backend to native. If
-the difference from native is under 5%, the cell is rendered as
-`same as baseline`.
+The table reports throughput in MB/s and compares each backend to native;
+cells under 5% from native render as `same as baseline`.
 
-For report-only generation, `yolo-bench report --workload <name>` regenerates
-a single workload page (and refreshes the index) without rebuilding every
-workload page. For paper artifacts, `yolo-bench paper --artifact dev-workflow`
-regenerates just that output into `../paper/generated/`.
-
-The `commit-time` paper figure uses the native `10,000`-file metadata-op time
-as its baseline reference instead of the session-micro backends, so the figure
-keeps a Base anchor even though native has no backend commit phase. The
-published figure now shows only the commit panel, with the x-axis labeled
-`commit time (μs/file)`.
-
-The metadata-ops paper figure keeps only the capped/annotated rendering,
-and that artifact now shows only the `100 files` row instead of both
-`100 files` and `10K files`. This keeps the paper figure focused on the small
-directory case without carrying the extra comparison row, and because that is
-now the only row in the figure, it does not repeat `100 files` as a left-side
-row label. Its paper layout also keeps the full width while further shortening
-the single-row figure height so the bars read less tall, and reserves extra
-top margin so the legend sits above the plot area without overlap. Across paper-facing
-plots, the source layer previously labeled `checkpoint`/`Chkpt` is now labeled
-`snapshot`/`Snap`.
-
-The fio paper table uses real column rules around the Base throughput column
-instead of per-cell `\multicolumn` borders so the separators render
-continuously through headers and grouped body rows. Because the table uses
-vertical rules around Base, it uses custom `\noalign{\hrule ...}` top/mid/
-bottom rules plus `\cline` instead of `booktabs` horizontal rules, which
-intentionally do not join
-vertical separators cleanly.
+For incremental regeneration: `yolo-bench report --workload <name>` rebuilds
+a single workload page (and the index); `yolo-bench paper --artifact <name>`
+rebuilds a single paper artifact.
 
 ---
 
@@ -758,7 +729,7 @@ parsing, and kmsg utilities with the CLI via the library crate.
 ### Directory layout
 
 ```
-bench/src/
+src/
   main.rs          — CLI, backend runner, statistics, exec-workload subcommand
   backend.rs       — Backend trait + exec-workload subprocess helper
   backends/
@@ -832,7 +803,7 @@ yolo-bench exec-workload --name <name> --dest <path> [--verbose]
 - `--runs N`: number of timed iterations (default 3).
 - `--verbose`: capture detailed logs for all runs, not just failures.
 - `--timestamped-results`: write results into a timestamped subdirectory
-  (`../bench-results/<timestamp>/`) instead of overwriting.
+  (`../perf-results/<timestamp>/`) instead of overwriting.
 - `report`: regenerate HTML reports from existing `results.json`.
 - `paper`: generate paper artifacts into `../paper/generated/`.
 - `list`: print all registered workloads and backends with availability.
@@ -855,7 +826,7 @@ with verbose logging enabled. Verbose logs include:
 
 ### Results
 
-Results are written under `../bench-results/`. By default the previous run is
+Results are written under `../perf-results/`. By default the previous run is
 overwritten; pass `--timestamped-results` to retain multiple runs.
 
 Each run root uses this layout:
@@ -871,7 +842,7 @@ re-run entries into the existing `results.json`, preserving results for
 workloads and backends that were not part of the current run.
 
 Persistence is incremental: after each completed `(workload, backend)`
-combination, the bench runner rewrites `../bench-results/results.json` immediately.
+combination, the bench runner rewrites `../perf-results/results.json` immediately.
 Report generation is incremental too: it rewrites only
 `<report-dir>/<workload>.html` for the workload that changed, plus the index
 page, instead of rebuilding every workload report on every update.
@@ -954,7 +925,7 @@ need to run as root.
 
 ### Output
 
-Artifacts are saved to `../bench-results/profiling/<workload>/<scenario>/`:
+Artifacts are saved to `../perf-results/profiling/<workload>/<scenario>/`:
 
 - `summary.txt` — ranked op table (printed to stdout and saved)
 - `bpftrace.txt` — raw per-op latency histograms
