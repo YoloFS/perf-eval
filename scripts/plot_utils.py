@@ -2,8 +2,6 @@
 
 from pathlib import Path
 import csv
-import shutil
-import subprocess
 import sys
 
 import matplotlib
@@ -41,25 +39,15 @@ def save_figure(fig, out_path: Path):
     print(f"Figure written to {out_path} (+ {png_path.name})", file=sys.stderr)
 
 
-def _find_libertine_dir():
-    """Locate Linux Libertine fonts via kpsewhich (texlive)."""
-    if shutil.which('kpsewhich'):
-        try:
-            r = subprocess.run(
-                ['kpsewhich', '-format=opentype fonts', 'LinLibertine_R.otf'],
-                capture_output=True, text=True, timeout=2,
-            )
-            if r.returncode == 0 and r.stdout.strip():
-                return Path(r.stdout.strip()).parent
-        except Exception:
-            pass
-    return None
-
-
-_libertine_dir = _find_libertine_dir()
-if _libertine_dir is not None:
-    for _f in fm.findSystemFonts(fontpaths=[str(_libertine_dir)]):
-        fm.fontManager.addfont(_f)
+for _d in (
+    *Path('/usr/local/texlive').glob('*/texmf-dist/fonts/opentype/public/libertine'),
+    Path('/usr/share/texlive/texmf-dist/fonts/opentype/public/libertine'),
+    Path('/usr/share/fonts/opentype/linux-libertine'),
+):
+    if _d.is_dir():
+        for _f in fm.findSystemFonts(fontpaths=[str(_d)]):
+            fm.fontManager.addfont(_f)
+        break
 
 plt.rcParams.update({
     'font.family': 'serif',
