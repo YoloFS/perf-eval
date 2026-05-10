@@ -2,6 +2,8 @@
 
 from pathlib import Path
 import csv
+import shutil
+import subprocess
 import sys
 import os
 
@@ -40,9 +42,31 @@ def save_figure(fig, out_path: Path):
     print(f"Figure written to {out_path} (+ {png_path.name})", file=sys.stderr)
 
 
-_libertine_dir = '/usr/share/fonts/opentype/linux-libertine'
-if os.path.isdir(_libertine_dir):
-    for _f in fm.findSystemFonts(fontpaths=[_libertine_dir]):
+def _find_libertine_dir():
+    """Locate Linux Libertine fonts. Prefer kpsewhich (texlive); fall back to
+    OS font dirs. Returns None if Libertine isn't installed anywhere."""
+    if shutil.which('kpsewhich'):
+        try:
+            r = subprocess.run(
+                ['kpsewhich', '-format=opentype fonts', 'LinLibertine_R.otf'],
+                capture_output=True, text=True, timeout=2,
+            )
+            if r.returncode == 0 and r.stdout.strip():
+                return Path(r.stdout.strip()).parent
+        except Exception:
+            pass
+    for c in (
+        '/usr/share/fonts/opentype/linux-libertine',          # Ubuntu fonts-linuxlibertine
+        '/usr/share/texlive/texmf-dist/fonts/opentype/public/libertine',  # Ubuntu texlive
+    ):
+        if os.path.isdir(c):
+            return Path(c)
+    return None
+
+
+_libertine_dir = _find_libertine_dir()
+if _libertine_dir is not None:
+    for _f in fm.findSystemFonts(fontpaths=[str(_libertine_dir)]):
         fm.fontManager.addfont(_f)
 
 plt.rcParams.update({
