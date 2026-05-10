@@ -14,10 +14,16 @@ import matplotlib.patheffects as pe
 
 
 def generated_dir_from_argv(argv: list[str]) -> Path:
-    if len(argv) < 2:
-        print(f"Usage: {argv[0]} <generated-dir>", file=sys.stderr)
+    if len(argv) >= 2:
+        return Path(argv[1])
+    # Default: ../../paper/generated/ relative to this file (umbrella layout).
+    script_dir = Path(__file__).resolve().parent
+    default = script_dir.parent.parent / "paper" / "generated"
+    if not default.is_dir():
+        print(f"Usage: {argv[0]} <generated-dir>  (default {default} not found)",
+              file=sys.stderr)
         sys.exit(1)
-    return Path(argv[1])
+    return default
 
 
 def read_csv_rows(generated_dir: Path, name: str):
@@ -26,9 +32,12 @@ def read_csv_rows(generated_dir: Path, name: str):
 
 
 def save_figure(fig, out_path: Path):
-    fig.savefig(out_path, bbox_inches='tight', dpi=300, metadata={"CreationDate": None})
+    meta = {"CreationDate": None}
+    fig.savefig(out_path, bbox_inches='tight', dpi=300, metadata=meta)
+    png_path = out_path.with_suffix('.png')
+    fig.savefig(png_path, bbox_inches='tight', dpi=300, metadata=meta)
     plt.close(fig)
-    print(f"Figure written to {out_path}", file=sys.stderr)
+    print(f"Figure written to {out_path} (+ {png_path.name})", file=sys.stderr)
 
 
 _libertine_dir = '/usr/share/fonts/opentype/linux-libertine'

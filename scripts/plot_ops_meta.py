@@ -1,4 +1,8 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["matplotlib>=3.7", "numpy>=1.24"]
+# ///
 """Plot metadata operation latency small multiples."""
 import sys
 

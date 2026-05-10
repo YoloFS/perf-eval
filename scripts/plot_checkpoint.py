@@ -1,4 +1,8 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["matplotlib>=3.7"]
+# ///
 """Plot checkpoint depth scaling (create/read/commit latency)."""
 import sys
 
