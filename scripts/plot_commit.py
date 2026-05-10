@@ -1,28 +1,18 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.11"
-# dependencies = ["matplotlib>=3.7", "numpy>=1.24"]
-# ///
 """Plot commit time per file operation."""
-import sys
-
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import MaxNLocator
 from matplotlib.patches import Patch
-from plot_utils import (
+from .plot_utils import (
     NATIVE_LINE_KW,
     TABLEAU10,
-    generated_dir_from_argv,
     native_legend_handle,
     read_csv_rows,
     save_figure,
 )
 
 
-def main():
-    generated_dir = generated_dir_from_argv(sys.argv)
-
+def plot_commit(generated_dir):
     out_path = generated_dir / 'commit.pdf'
 
     rows = read_csv_rows(generated_dir, 'commit.csv')
@@ -96,5 +86,3 @@ def main():
     save_figure(fig, out_path)
 
 
-if __name__ == '__main__':
-    main()

@@ -12,19 +12,6 @@ import matplotlib.pyplot as plt
 import matplotlib.patheffects as pe
 
 
-def generated_dir_from_argv(argv: list[str]) -> Path:
-    if len(argv) >= 2:
-        return Path(argv[1])
-    # Default: ../../paper/generated/ relative to this file (umbrella layout).
-    script_dir = Path(__file__).resolve().parent
-    default = script_dir.parent.parent / "paper" / "generated"
-    if not default.is_dir():
-        print(f"Usage: {argv[0]} <generated-dir>  (default {default} not found)",
-              file=sys.stderr)
-        sys.exit(1)
-    return default
-
-
 def read_csv_rows(generated_dir: Path, name: str):
     with (generated_dir / name).open() as f:
         return list(csv.DictReader(f))

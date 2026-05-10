@@ -1,22 +1,14 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.11"
-# dependencies = ["matplotlib>=3.7", "numpy>=1.24"]
-# ///
 """Plot metadata operation latency small multiples."""
-import sys
-
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import numpy as np
 from matplotlib.ticker import MaxNLocator
-from plot_utils import (
+from .plot_utils import (
     BACKEND_COLORS,
     NATIVE_LINE_KW,
     UNCAPPABLE,
     backend_legend_handle,
     fmt_lat,
-    generated_dir_from_argv,
     native_legend_handle,
     read_csv_rows,
     save_figure,
@@ -25,10 +17,9 @@ from plot_utils import (
 CAP_FACTOR = 5.0
 
 
-def main():
-    generated_dir = generated_dir_from_argv(sys.argv)
-    out_path = generated_dir / 'ops-meta.pdf'
-    rows = read_csv_rows(generated_dir, 'ops-meta.csv')
+def plot_metadata(generated_dir):
+    out_path = generated_dir / 'metadata.pdf'
+    rows = read_csv_rows(generated_dir, 'metadata.csv')
 
     ops = ['create', 'open', 'stat', 'readdir', 'append', 'rename', 'unlink']
     bar_backends = ['YoloFS (no perm)', 'YoloFS', 'OverlayFS', 'BranchFS']
@@ -165,5 +156,3 @@ def main():
     save_figure(fig, out_path)
 
 
-if __name__ == '__main__':
-    main()

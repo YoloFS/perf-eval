@@ -1,29 +1,20 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.11"
-# dependencies = ["matplotlib>=3.7", "numpy>=1.24"]
-# ///
 """Plot developer workflow phase breakdown."""
-import sys
-
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.patheffects as pe
 import numpy as np
 from matplotlib.ticker import MaxNLocator
-from plot_utils import (
+from .plot_utils import (
     BACKEND_COLORS,
     NATIVE_LINE_KW,
     backend_legend_handle,
-    generated_dir_from_argv,
     native_legend_handle,
     read_csv_rows,
     save_figure,
 )
 
 
-def main():
-    generated_dir = generated_dir_from_argv(sys.argv)
+def plot_dev(generated_dir):
     out_path = generated_dir / 'dev.pdf'
 
     rows = read_csv_rows(generated_dir, 'dev.csv')
@@ -130,5 +121,3 @@ def main():
     save_figure(fig, out_path)
 
 
-if __name__ == '__main__':
-    main()

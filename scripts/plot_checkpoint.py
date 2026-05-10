@@ -1,24 +1,15 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.11"
-# dependencies = ["matplotlib>=3.7"]
-# ///
 """Plot checkpoint depth scaling (create/read/commit latency)."""
-import sys
-
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator, FuncFormatter
-from plot_utils import (
+from .plot_utils import (
     BACKEND_COLORS,
     TABLEAU10,
-    generated_dir_from_argv,
     read_csv_rows,
     save_figure,
 )
 
 
-def main():
-    generated_dir = generated_dir_from_argv(sys.argv)
+def plot_checkpoint(generated_dir):
     out_path = generated_dir / 'checkpoint.pdf'
 
     create_rows = read_csv_rows(generated_dir, 'checkpoint-create.csv')
@@ -135,5 +126,3 @@ def main():
     save_figure(fig, out_path)
 
 
-if __name__ == '__main__':
-    main()
