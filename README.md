@@ -25,7 +25,7 @@ it against alternative staging/sandboxing approaches.
 ### Publication artifacts
 
 The paper pipeline can emit a publication-oriented **data-op (fio)** summary
-table under `paper/generated/`:
+table under `../paper/generated/`:
 
 - `ops-data.tex` — compact LaTeX table source,
 - `fio.pdf` — compiled table PDF (if `pdflatex` is available),
@@ -39,7 +39,7 @@ the difference from native is under 5%, the cell is rendered as
 For report-only generation, `yolo-bench report --workload <name>` regenerates
 a single workload page (and refreshes the index) without rebuilding every
 workload page. For paper artifacts, `yolo-bench paper --artifact dev-workflow`
-regenerates just that output into `paper/generated/`.
+regenerates just that output into `../paper/generated/`.
 
 The `commit-time` paper figure uses the native `10,000`-file metadata-op time
 as its baseline reference instead of the session-micro backends, so the figure
@@ -228,7 +228,7 @@ earliest commit in the chain, not from a local v6.12.x tree:
 4 of 5 commits touch only `fs/overlayfs/file.c`; commit 1 also
 touches `dir.c` and `overlayfs.h`. Total: ~210 insertions, ~150
 deletions. The benchmark stores checked-in workflow fixtures under
-`bench/fixtures/dev-workflow/`: pinned commit IDs, per-commit command
+`fixtures/dev-workflow/`: pinned commit IDs, per-commit command
 lists for search/read/edit, commit messages, and the generated tinyconfig
 variant with `CONFIG_OVERLAY_FS=y`.
 
@@ -645,7 +645,7 @@ This gives a clean measurement of overlayfs overhead without shell noise.
 
 ### branchfs
 
-`branchfs` is a FUSE filesystem (from `bench/third_party/branchfs`) that provides
+`branchfs` is a FUSE filesystem (from `third_party/branchfs`) that provides
 O(1) branch creation and atomic commit-to-parent semantics. Each iteration:
 
 1. Mounts branchfs over a fresh base directory with a per-iteration storage
@@ -752,7 +752,7 @@ when the session is dropped at the end of each iteration.
 ## 6. Implementation
 
 The benchmark suite is a Rust binary (`yolo-bench`) in the same Cargo workspace
-as the CLI, under `bench/src/`. It shares ioctl types, mount helpers, config
+as the CLI, under `src/`. It shares ioctl types, mount helpers, config
 parsing, and kmsg utilities with the CLI via the library crate.
 
 ### Directory layout
@@ -802,7 +802,7 @@ Each backend implements `available()`, `unavailable_reason()`, and `hidden()`.
 
 | Tool | Source | Install |
 |---|---|---|
-| `branchfs` | `bench/third_party/branchfs/` | `make -C bench install-branchfs` |
+| `branchfs` | `third_party/branchfs/` | `make install-branchfs` |
 
 ### CLI
 
@@ -832,9 +832,9 @@ yolo-bench exec-workload --name <name> --dest <path> [--verbose]
 - `--runs N`: number of timed iterations (default 3).
 - `--verbose`: capture detailed logs for all runs, not just failures.
 - `--timestamped-results`: write results into a timestamped subdirectory
-  (`bench-results/<timestamp>/`) instead of overwriting.
+  (`../bench-results/<timestamp>/`) instead of overwriting.
 - `report`: regenerate HTML reports from existing `results.json`.
-- `paper`: generate paper artifacts into `paper/generated/`.
+- `paper`: generate paper artifacts into `../paper/generated/`.
 - `list`: print all registered workloads and backends with availability.
 - `profile`: run the profiling mode (see §7).
 - `exec-workload`: internal subcommand used by all backends to run a
@@ -855,7 +855,7 @@ with verbose logging enabled. Verbose logs include:
 
 ### Results
 
-Results are written under `bench-results/`. By default the previous run is
+Results are written under `../bench-results/`. By default the previous run is
 overwritten; pass `--timestamped-results` to retain multiple runs.
 
 Each run root uses this layout:
@@ -871,7 +871,7 @@ re-run entries into the existing `results.json`, preserving results for
 workloads and backends that were not part of the current run.
 
 Persistence is incremental: after each completed `(workload, backend)`
-combination, the bench runner rewrites `bench-results/results.json` immediately.
+combination, the bench runner rewrites `../bench-results/results.json` immediately.
 Report generation is incremental too: it rewrites only
 `<report-dir>/<workload>.html` for the workload that changed, plus the index
 page, instead of rebuilding every workload report on every update.
@@ -954,7 +954,7 @@ need to run as root.
 
 ### Output
 
-Artifacts are saved to `bench-results/profiling/<workload>/<scenario>/`:
+Artifacts are saved to `../bench-results/profiling/<workload>/<scenario>/`:
 
 - `summary.txt` — ranked op table (printed to stdout and saved)
 - `bpftrace.txt` — raw per-op latency histograms
