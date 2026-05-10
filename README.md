@@ -3,6 +3,19 @@
 This document describes the evaluation strategy for YoloFS: what to measure,
 why, and how the benchmark suite is structured.
 
+## Contents
+
+1. [Goals](#1-goals)
+2. [Workloads](#2-workloads)
+   - [Session micro-benchmarks](#session-micro-benchmarks)
+   - [Session macro-benchmarks](#session-macro-benchmarks)
+   - [Per-op micro-benchmarks](#per-op-micro-benchmarks)
+3. [Backends](#3-backends)
+4. [Measurement Models](#4-measurement-models)
+5. [Fixture vs Run](#5-fixture-vs-run)
+6. [Implementation](#6-implementation)
+7. [Profiling](#7-profiling)
+
 ---
 
 ## 1. Goals
