@@ -5,7 +5,6 @@ import csv
 import shutil
 import subprocess
 import sys
-import os
 
 import matplotlib
 
@@ -43,8 +42,7 @@ def save_figure(fig, out_path: Path):
 
 
 def _find_libertine_dir():
-    """Locate Linux Libertine fonts. Prefer kpsewhich (texlive); fall back to
-    OS font dirs. Returns None if Libertine isn't installed anywhere."""
+    """Locate Linux Libertine fonts via kpsewhich (texlive)."""
     if shutil.which('kpsewhich'):
         try:
             r = subprocess.run(
@@ -55,12 +53,6 @@ def _find_libertine_dir():
                 return Path(r.stdout.strip()).parent
         except Exception:
             pass
-    for c in (
-        '/usr/share/fonts/opentype/linux-libertine',          # Ubuntu fonts-linuxlibertine
-        '/usr/share/texlive/texmf-dist/fonts/opentype/public/libertine',  # Ubuntu texlive
-    ):
-        if os.path.isdir(c):
-            return Path(c)
     return None
 
 
