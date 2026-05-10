@@ -198,23 +198,10 @@ Requirements for the chosen series:
   commands
 
 **Chosen series**: Amir Goldstein's overlayfs `ovl_file` refactoring
-(5 commits, merged in v6.13). The workload starts from the parent of the
-earliest commit in the chain, not from a local v6.12.x tree:
-
-- Base commit: `c2c54b5f34f6^`
-
-1. `c2c54b5f34f6` — do not open non-data lower file for fsync
-2. `87a8a76c34a2` — allocate container struct `ovl_file` for ovl private context
-3. `18e48d0e2c7b` — store upper real file in `ovl_file` struct
-4. `4333e42ed444` — convert `ovl_real_fdget_path()` callers to `ovl_real_file_path()`
-5. `d66907b51ba0` — convert `ovl_real_fdget()` callers to `ovl_real_file()`
-
-4 of 5 commits touch only `fs/overlayfs/file.c`; commit 1 also
-touches `dir.c` and `overlayfs.h`. Total: ~210 insertions, ~150
-deletions. The benchmark stores checked-in workflow fixtures under
-`fixtures/dev-workflow/`: pinned commit IDs, per-commit command
-lists for search/read/edit, commit messages, and the generated tinyconfig
-variant with `CONFIG_OVERLAY_FS=y`.
+(5 commits, merged in v6.13, mostly in `fs/overlayfs/file.c`). Pinned base
+commit and per-commit replay scripts (search/read/edit/commit-message)
+live under `fixtures/dev-workflow/`, alongside the tinyconfig variant
+with `CONFIG_OVERLAY_FS=y`.
 
 Each commit follows the same developer/agent loop:
 1. **Search** — `grep -rn` for relevant patterns (e.g., find all call
@@ -244,15 +231,6 @@ The HTML report for `dev-workflow` shows one small stacked bar chart per
 workflow phase, collapsed to `run` versus `checkpoint`, with native shown as a
 horizontal baseline line. The separate summary plot shows stacked `run` versus
 backend `commit`, again with native shown as a horizontal baseline.
-
-In practice, the edit stage uses `sed -i` for simple local substitutions and
-`patch` for larger multi-line block rewrites. Each checked-in shell snippet is
-one atomic benchmark step.
-
-For `yolo-realistic`, the workload's allowlist explicitly covers standard
-system config reads under `/etc`, Git's normal config reads, and host `/tmp`,
-and it fully allows the session worktree itself: the kernel build writes and
-executes helper binaries inside that tree during a realistic developer session.
 
 **Steps measured** (each timed independently):
 
@@ -336,16 +314,11 @@ overhead of the interposition layer.
 
 Large-file I/O using [fio](https://github.com/axboe/fio). Each workload
 generates a jobfile, runs `fio --output-format=json`, and parses the result.
-Buffered I/O (`direct=0`) is used because yolofs operates at the VFS level and
-real agent workloads use the page cache. The generated fio jobfiles set
-`invalidate=0` so fio does not discard the page cache on open. Read-style fio
-workloads that need a pre-existing file create the 1 GiB backing file inside
-the mounted sandbox before the timed run. Cold variants then have the backend
-drop page cache *after* that sandbox-local file is prepared and *before* fio
-starts, so the cold transition is controlled by the harness rather than by fio
-invalidating an already-open file. Each fio workload uses a 1 GiB backing file
-but performs 256 MiB of total I/O so cold random-read runs finish in roughly
-10 seconds on the slowest backends while still exercising a large working set.
+Buffered I/O (`direct=0`, `invalidate=0`) — yolofs operates at the VFS level
+and real agent workloads use the page cache; cold variants are controlled
+by the harness dropping cache before fio starts, not by fio itself. Each
+workload uses a 1 GiB backing file but performs 256 MiB of total I/O so cold
+random-reads finish in ~10s on the slowest backends.
 Seeded fio workloads create that file inside the mounted sandbox with a
 deterministic non-zero byte pattern rather than a zero-filled image.
 
@@ -913,17 +886,10 @@ kfunctions via BTF (`kfunc`/`kretfunc` probes):
 | `yolo_release` | File release |
 | `yolo_fill_base` | Readdir phase-2 base-entry dedup |
 
-Each function gets its own per-tid start map (`@s_<func>[tid]`) to avoid
-clobbering timestamps on nested calls (e.g. `yolo_create` calling
-`yolo_staging_alloc`). Latency is accumulated into a `hist()` map in
-microseconds; the map is flushed on SIGINT when the workload completes.
-
-perf is spawned first so it is already recording before bpftrace begins
-attaching probes. bpftrace signals readiness via `BEGIN { printf("READY\n"); }`;
-the workload starts only after READY is received.
-
-Pass `--no-bpftrace` to skip the histogram collection and get a clean flamegraph
-without BPF ring-buffer overhead in the stacks.
+Latencies accumulate into per-function `hist()` maps in microseconds, flushed
+on SIGINT when the workload completes. Pass `--no-bpftrace` to skip histogram
+collection and get a clean flamegraph without BPF ring-buffer overhead in
+the stacks.
 
 ### Flamegraph
 
