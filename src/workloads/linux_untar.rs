@@ -2,7 +2,7 @@ use crate::workload::{Workload, WorkloadKind};
 use anyhow::{Context, Result, bail};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use yolofs::config::Perm;
+use yolofs::perm::Perm;
 
 /// Compute a relative path from `from` (a directory) to `to`.
 fn relative_path(from: &Path, to: &Path) -> PathBuf {
@@ -107,7 +107,7 @@ impl Workload for LinuxUntar {
     fn realistic_rules(&self, session_root: &Path) -> Vec<(String, Perm)> {
         vec![
             (session_root.to_string_lossy().into_owned(), Perm::Allow),
-            (self.fixture_dir.to_string_lossy().into_owned(), Perm::Ro),
+            (self.fixture_dir.to_string_lossy().into_owned(), Perm::Read),
         ]
     }
 

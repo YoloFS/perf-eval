@@ -1440,10 +1440,10 @@ fn main() -> Result<()> {
                     paper::commit::render(&results, &generated_dir)?;
                 }
                 "meta-ops" => {
-                    paper::ops_meta::render(&results, &generated_dir)?;
+                    paper::metadata::render(&results, &generated_dir)?;
                 }
                 "fio-table" => {
-                    paper::ops_data::render(&results, &generated_dir)?;
+                    paper::fio::render(&results, &generated_dir)?;
                 }
                 "checkpoint-scaling" => {
                     paper::checkpoint::render(&out_dir, &generated_dir)?;

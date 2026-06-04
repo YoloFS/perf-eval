@@ -37,7 +37,7 @@ use std::io::{self, BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::Duration;
-use yolofs::config::Perm;
+use yolofs::perm::Perm;
 
 pub const OP_FILE_SIZE: usize = 4096;
 pub const FIO_FILE_SIZE: &str = "1g";

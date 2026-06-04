@@ -5,7 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::Instant;
-use yolofs::config::Perm;
+use yolofs::perm::Perm;
 
 #[derive(Deserialize)]
 struct SeriesFixture {
@@ -184,8 +184,8 @@ impl Workload for DevWorkflow {
                 self.linux_fixture.to_string_lossy().into_owned(),
                 Perm::Allow,
             ),
-            (self.fixture_dir.to_string_lossy().into_owned(), Perm::Ro),
-            ("/etc".to_string(), Perm::Ro),
+            (self.fixture_dir.to_string_lossy().into_owned(), Perm::Read),
+            ("/etc".to_string(), Perm::Read),
             ("/etc/gitconfig".to_string(), Perm::Allow),
             ("/tmp".to_string(), Perm::Allow),
         ];
@@ -196,7 +196,7 @@ impl Workload for DevWorkflow {
             ));
             rules.push((
                 home.join(".config/git").to_string_lossy().into_owned(),
-                Perm::Ro,
+                Perm::Read,
             ));
         }
         rules

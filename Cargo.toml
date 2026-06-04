@@ -8,7 +8,7 @@ name = "yolo-bench"
 path = "src/main.rs"
 
 [dependencies]
-yolofs = { path = ".." }
+yolofs = { path = "../filesystem" }
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 dirs-next = "2"

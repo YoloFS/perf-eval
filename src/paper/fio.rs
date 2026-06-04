@@ -7,10 +7,6 @@ use crate::workloads;
 use anyhow::{Context, Result};
 use std::path::Path;
 
-/// Table caption for the float environment.
-const CAPTION: &str = "Single-threaded I/O throughput on a 1 GB staged file with 4 KB I/O requests compared with the base Ext4 filesystem.";
-/// LaTeX label for cross-referencing.
-const LABEL: &str = "tab:ops-data";
 const TABLEAU_COLOR_DEFS: &str = "\
 \\definecolor{TableauGreen}{HTML}{59A14F}\n\
 \\definecolor{TableauRed}{HTML}{E15759}\n";

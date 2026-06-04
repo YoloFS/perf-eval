@@ -3,7 +3,7 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use yolofs::config::Perm;
+use yolofs::perm::Perm;
 
 /// Timing for one timed iteration.
 ///

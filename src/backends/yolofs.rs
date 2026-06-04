@@ -6,7 +6,8 @@ use std::os::unix::io::AsRawFd;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::time::Instant;
-use yolofs::config::{Config, Perm};
+use yolofs::config::Config;
+use yolofs::perm::Perm;
 
 // ── Session (mount / unmount lifecycle) ──────────────────────────────────────
 
@@ -65,15 +66,15 @@ impl Session {
 
     fn checkpoint_named(&self, name: &str) -> Result<()> {
         let out = Command::new("yolofs")
-            .arg("checkpoint")
+            .arg("snapshot")
             .arg(name)
             .current_dir(self.root.path())
             .env("NO_COLOR", "1")
             .output()
-            .context("running yolofs checkpoint")?;
+            .context("running yolofs snapshot")?;
         if !out.status.success() {
             bail!(
-                "yolofs checkpoint failed: {}",
+                "yolofs snapshot failed: {}",
                 String::from_utf8_lossy(&out.stderr)
             );
         }
@@ -104,7 +105,7 @@ impl Session {
     }
 
     fn status_time(&self) -> Result<u64> {
-        // Run the same logic as `yolofs status` in-process:
+        // Run the same logic as `yolofs review` in-process:
         // read journal → resolve segments → build tree → classify + print each entry.
         // Output goes to /dev/null to avoid I/O noise.
         let t = Instant::now();
@@ -117,28 +118,15 @@ impl Session {
         // Set cwd so session_dir() finds .yolofs/.
         let saved_cwd = std::env::current_dir()?;
         std::env::set_current_dir(self.root.path())?;
-        let result = yolofs::cmd::diff::run_status(None, None, None);
+        let result = yolofs::cmd::review::run_review(None, None, false, false);
         std::env::set_current_dir(saved_cwd)?;
 
         // Restore stdout.
         nix::unistd::dup2(saved_stdout, 1)?;
         nix::unistd::close(saved_stdout)?;
 
-        result.context("in-process yolofs status")?;
+        result.context("in-process yolofs review")?;
         Ok(t.elapsed().as_micros() as u64)
-    }
-
-    fn journal_debug(&self) -> String {
-        let yolo_dir = self.root.path().join(".yolofs");
-        match yolofs::journal::Journal::read(&yolo_dir) {
-            Ok(journal) => journal
-                .segments
-                .iter()
-                .map(|r| format!("  {r:?}"))
-                .collect::<Vec<_>>()
-                .join("\n"),
-            Err(_) => String::new(),
-        }
     }
 }
 
@@ -249,37 +237,17 @@ fn run_yolo_iteration(
     } else {
         Stdio::piped()
     });
-    let result = match backend::spawn_and_await_ready(&mut cmd, cold) {
-        Ok(sp) => {
-            if cold {
-                crate::workloads::drop_page_cache()
-                    .context("dropping page cache after subprocess READY")?;
-            }
-            sp.go_with_checkpoint(&mut session)
-        }
-        Err(e) => {
-            let journal = session.journal_debug();
-            if !journal.is_empty() {
-                eprintln!("    yolofs journal at failure:\n{journal}");
-            }
-            return Err(e);
-        }
-    };
-    let result = result?;
+    let sp = backend::spawn_and_await_ready(&mut cmd, cold)?;
+    if cold {
+        crate::workloads::drop_page_cache()
+            .context("dropping page cache after subprocess READY")?;
+    }
+    let result = sp.go_with_checkpoint(&mut session)?;
 
-    // Measure status query time (yolofs status).
+    // Measure status query time (yolofs review).
     let status_us = session.status_time()?;
 
-    let commit_ms = match session.commit(verbose) {
-        Ok(ms) => ms,
-        Err(e) => {
-            let journal = session.journal_debug();
-            if !journal.is_empty() {
-                eprintln!("    yolofs journal at failure:\n{journal}");
-            }
-            return Err(e);
-        }
-    };
+    let commit_ms = session.commit(verbose)?;
 
     Ok((
         IterResult {
@@ -336,7 +304,7 @@ impl Backend for YoloNoPerm {
     fn run_one(&self, workload: &dyn Workload, verbose: bool) -> Result<(IterResult, Vec<String>)> {
         let config = Config {
             permission: false,
-            checkpoint: false,
+            auto_snapshot: false,
             rules: BTreeMap::new(),
             ..Default::default()
         };
@@ -379,16 +347,16 @@ impl Backend for YoloRealistic {
             // linker, and tools (tar, xz, etc.).
             if let Ok(exe) = std::env::current_exe() {
                 if let Some(dir) = exe.parent() {
-                    rules.insert(dir.to_string_lossy().into_owned(), Perm::Ro);
+                    rules.insert(dir.to_string_lossy().into_owned(), Perm::Read);
                 }
             }
             for dir in ["/usr", "/lib", "/lib64", "/bin", "/sbin"] {
-                rules.insert(dir.to_string(), Perm::Ro);
+                rules.insert(dir.to_string(), Perm::Read);
             }
         }
         let config = Config {
             permission: true,
-            checkpoint: false,
+            auto_snapshot: false,
             rules,
             ..Default::default()
         };
@@ -448,35 +416,15 @@ impl Backend for YoloRealistic {
         } else {
             Stdio::piped()
         });
-        let result = match backend::spawn_and_await_ready(&mut cmd, cold) {
-            Ok(sp) => {
-                if cold {
-                    crate::workloads::drop_page_cache()
-                        .context("dropping page cache after subprocess READY")?;
-                }
-                sp.go_with_checkpoint(&mut session)
-            }
-            Err(e) => {
-                let journal = session.journal_debug();
-                if !journal.is_empty() {
-                    eprintln!("    yolofs journal at failure:\n{journal}");
-                }
-                return Err(e);
-            }
-        };
-        let result = result?;
+        let sp = backend::spawn_and_await_ready(&mut cmd, cold)?;
+        if cold {
+            crate::workloads::drop_page_cache()
+                .context("dropping page cache after subprocess READY")?;
+        }
+        let result = sp.go_with_checkpoint(&mut session)?;
         let status_us = session.status_time()?;
 
-        let commit_ms = match session.commit(verbose) {
-            Ok(ms) => ms,
-            Err(e) => {
-                let journal = session.journal_debug();
-                if !journal.is_empty() {
-                    eprintln!("    yolofs journal at failure:\n{journal}");
-                }
-                return Err(e);
-            }
-        };
+        let commit_ms = session.commit(verbose)?;
 
         Ok((
             IterResult {
