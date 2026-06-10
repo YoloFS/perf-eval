@@ -562,7 +562,7 @@ level of gating:
 `native` is the absolute floor.
 
 Both YoloFS backend configurations set `checkpoint: false` in the generated
-`yolofs.toml` to prevent `yolo exec` from auto-checkpointing. For workloads
+`yolofs.toml` to prevent `yolo run` from auto-checkpointing. For workloads
 that need a checkpoint (the `source=checkpoint` metadata variants), the
 backend explicitly calls `yolo checkpoint` between `prepare_workdir()` and
 the timed run, giving the harness full control over when `checkpoint_gen`
