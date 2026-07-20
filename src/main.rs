@@ -91,7 +91,7 @@ enum OpGroup {
 enum Cmd {
     /// Generate HTML reports from existing results JSON
     Report {
-        /// Results root (default: bench-results)
+        /// Results root (default: perf-results)
         path: Option<PathBuf>,
         /// Generate a single HTML workload report (and refresh the index)
         #[arg(long)]
@@ -290,7 +290,7 @@ struct OutputLayout {
 
 impl OutputLayout {
     fn from_env(_env: &Env, timestamped: bool) -> Self {
-        let base = repo_root().join("bench-results");
+        let base = repo_root().join("perf-results");
         let root = if timestamped {
             let ts = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
