@@ -184,8 +184,8 @@ impl Workload for DevWorkflow {
                 self.linux_fixture.to_string_lossy().into_owned(),
                 Perm::Allow,
             ),
-            (self.fixture_dir.to_string_lossy().into_owned(), Perm::Read),
-            ("/etc".to_string(), Perm::Read),
+            (self.fixture_dir.to_string_lossy().into_owned(), Perm::ReadOnly),
+            ("/etc".to_string(), Perm::ReadOnly),
             ("/etc/gitconfig".to_string(), Perm::Allow),
             ("/tmp".to_string(), Perm::Allow),
         ];
@@ -196,7 +196,7 @@ impl Workload for DevWorkflow {
             ));
             rules.push((
                 home.join(".config/git").to_string_lossy().into_owned(),
-                Perm::Read,
+                Perm::ReadOnly,
             ));
         }
         rules

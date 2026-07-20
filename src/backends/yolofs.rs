@@ -39,7 +39,7 @@ impl Session {
         workload.populate_base(&base_work)?;
 
         let t = Instant::now();
-        let out = Command::new("yolofs")
+        let out = Command::new("yolo")
             .arg("mount")
             .current_dir(root.path())
             .env("NO_COLOR", "1")
@@ -65,7 +65,7 @@ impl Session {
     }
 
     fn checkpoint_named(&self, name: &str) -> Result<()> {
-        let out = Command::new("yolofs")
+        let out = Command::new("yolo")
             .arg("snapshot")
             .arg(name)
             .current_dir(self.root.path())
@@ -83,7 +83,7 @@ impl Session {
 
     fn commit(&self, verbose: bool) -> Result<u64> {
         let t = Instant::now();
-        let out = Command::new("yolofs")
+        let out = Command::new("yolo")
             .arg("commit")
             .current_dir(self.root.path())
             .env("NO_COLOR", "1")
@@ -118,7 +118,7 @@ impl Session {
         // Set cwd so session_dir() finds .yolofs/.
         let saved_cwd = std::env::current_dir()?;
         std::env::set_current_dir(self.root.path())?;
-        let result = yolofs::cmd::review::run_review(None, None, false, false);
+        let result = yolofs::cmd::review::run_review(None, false, false);
         std::env::set_current_dir(saved_cwd)?;
 
         // Restore stdout.
@@ -143,7 +143,7 @@ impl CheckpointController for Session {
 
 impl Drop for Session {
     fn drop(&mut self) {
-        let _ = Command::new("yolofs")
+        let _ = Command::new("yolo")
             .arg("unmount")
             .current_dir(self.root.path())
             .env("NO_COLOR", "1")
@@ -153,12 +153,12 @@ impl Drop for Session {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-/// Build an exec-workload command wrapped in `yolofs exec --` so the subprocess
-/// runs inside the yolofs sandbox (proper process tracking, permission gating).
-/// Build an exec-workload command wrapped in `yolofs exec --` so the subprocess
-/// runs inside the yolofs sandbox (proper process tracking, permission gating).
+/// Build an exec-workload command wrapped in `yolo run --no-review --` so the
+/// subprocess runs inside the yolofs sandbox (proper process tracking,
+/// permission gating). `--no-review` suppresses the post-run review summary so
+/// it doesn't contaminate the subprocess stdout the parent parses.
 ///
-/// `yolofs exec` needs cwd = session root to find `.yolofs/`. The inner
+/// `yolo run` needs cwd = session root to find `.yolofs/`. The inner
 /// `exec-workload` receives an absolute `--dest` path so it doesn't
 /// depend on cwd.
 fn yolo_exec_workload_cmd(
@@ -169,8 +169,9 @@ fn yolo_exec_workload_cmd(
     wait_after_ready: bool,
 ) -> Result<Command> {
     let self_exe = std::env::current_exe().context("resolving current executable")?;
-    let mut cmd = Command::new("yolofs");
-    cmd.arg("exec")
+    let mut cmd = Command::new("yolo");
+    cmd.arg("run")
+        .arg("--no-review")
         .arg("--")
         .arg(self_exe)
         .arg("exec-workload")
@@ -184,7 +185,7 @@ fn yolo_exec_workload_cmd(
     if wait_after_ready {
         cmd.arg("--wait-after-ready");
     }
-    // yolofs exec finds the session from cwd.
+    // yolo run finds the session from cwd.
     cmd.current_dir(session.root.path());
     Ok(cmd)
 }
@@ -347,11 +348,11 @@ impl Backend for YoloRealistic {
             // linker, and tools (tar, xz, etc.).
             if let Ok(exe) = std::env::current_exe() {
                 if let Some(dir) = exe.parent() {
-                    rules.insert(dir.to_string_lossy().into_owned(), Perm::Read);
+                    rules.insert(dir.to_string_lossy().into_owned(), Perm::ReadOnly);
                 }
             }
             for dir in ["/usr", "/lib", "/lib64", "/bin", "/sbin"] {
-                rules.insert(dir.to_string(), Perm::Read);
+                rules.insert(dir.to_string(), Perm::ReadOnly);
             }
         }
         let config = Config {
@@ -368,7 +369,7 @@ impl Backend for YoloRealistic {
         workload.populate_base(&base_work)?;
 
         let t_init = Instant::now();
-        let out = Command::new("yolofs")
+        let out = Command::new("yolo")
             .arg("mount")
             .current_dir(root.path())
             .env("NO_COLOR", "1")
