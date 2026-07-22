@@ -2,7 +2,3 @@
 	path = third_party/branchfs
 	url = https://github.com/multikernel/branchfs
 	branch = main
-[submodule "third_party/try"]
-	path = third_party/try
-	url = https://github.com/binpash/try
-	branch = main
