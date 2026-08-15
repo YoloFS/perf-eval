@@ -13,6 +13,7 @@ why, and how the benchmark suite is structured.
 3. [Backends](#3-backends)
 4. [Measurement Models](#4-measurement-models)
 5. [Fixture vs Run](#5-fixture-vs-run)
+   - [Resource requirements per experiment](#resource-requirements-per-experiment)
 6. [Implementation](#6-implementation)
 7. [Profiling](#7-profiling)
 
@@ -706,6 +707,45 @@ Mean ± stddev of the N timed iterations is reported; outliers (>2σ) are flagge
 
 **Teardown**: the mount / checkpoint / session directory are removed automatically
 when the session is dropped at the end of each iteration.
+
+### Resource requirements per experiment
+
+Time, disk, and network cost of each entry point. Times are the **measured
+benchmark time** from the reference run committed under `../perf-results/`
+(AMD EPYC 7302P, 128 GB RAM, SATA SSD, ext4); they exclude one-time fixture
+setup, the kernel-module build, and mount/unmount overhead, so wall-clock on
+your machine will be higher. Storage-bound workloads (fio, `linux-untar`,
+`dev-workflow`) scale with disk speed — on an HDD or a VM expect several times
+these numbers.
+
+| Entry point | What runs | Benchmark time | Peak disk | Network | Notes |
+|---|---|---|---|---|---|
+| `./micro.sh` | `write/overwrite/rename/unlink-files` × 5 backends | ~2 min | < 1 GB in `$TMPDIR` | none | No fixture. Safe starting point. |
+| `./macro.sh` | `worktree`, `dev-workflow`, `linux-untar` × 3–4 backends | ~5 min | **~8 GB** cached Linux clone in `~/.cache/yolo-bench/linux`, plus ~1.5 GB per timed session | **first run only**: ~3 GB Linux clone + ~140 MB kernel tarball | Dominated by fixture setup on a cold cache — see below. |
+| `yolo-bench --op` | 8 fio + ~56 metadata workloads × 5–6 backends | ~21 min | 1 GiB fio backing file per session; `meta-create-100k` creates 100k files | none | Longest phase. Narrow with `--op-group fio` or `--op-group meta`. |
+| `./snapshot.sh` | `checkpoint-scaling`: 4 modes × 5 backends × snapshot depth 10→100 | not separately recorded | < 1 GB | none | OverlayFS stops at ~50 snapshots by design; BranchFS at depth 100 dominates the run. |
+| `./report.sh` / `./paper.sh` | plotting only | < 1 min | negligible | none | No root, no module; runs on any machine with the results JSON. |
+
+**Memory**: the benchmarks themselves are not memory-hungry, but the one-time
+`git clone` of the Linux kernel resolves deltas in RAM and wants several GB.
+On a small VM, pre-seed the fixture instead (below).
+
+**Cold-cache fixture setup (`macro.sh`)**. `worktree` and `dev-workflow` share a
+full clone of the Linux kernel at `~/.cache/yolo-bench/linux`. The clone keeps
+full history on purpose: `dev-workflow` checks out an exact pinned base commit
+and replays a patchset extracted from kernel history, so a shallow clone cannot
+be substituted. On a cold cache the first `macro.sh` run therefore downloads
+~3 GB and expands to ~8 GB, which is slow and memory-hungry on a small machine.
+The harness prints this cost up front and refuses to start if free space is
+insufficient. To avoid the download entirely, pre-seed a local mirror — the
+fixture is then cloned from it with no network access:
+
+```bash
+git clone --mirror https://github.com/torvalds/linux.git ~/.cache/yolo-bench/linux.git
+```
+
+Point `XDG_CACHE_HOME` elsewhere to place the fixture on a different filesystem.
+The provided CloudLab machine ships with the fixture already cached.
 
 ---
 
