@@ -124,7 +124,8 @@ enum Cmd {
         /// Backend to test (default: all three: yolo-realistic, overlayfs, branchfs)
         #[arg(long)]
         backend: Option<String>,
-        /// Mode to run: create, read, commit (default: all three)
+        /// Mode to run: create, read, commit, status (default: all four;
+        /// the paper figure uses create, read, and commit)
         #[arg(long)]
         mode: Option<String>,
     },
