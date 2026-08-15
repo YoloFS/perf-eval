@@ -39,9 +39,12 @@ it against alternative staging/sandboxing approaches.
 
 `yolo-bench paper` writes paper-oriented outputs to `../paper/generated/`:
 
-- `ops-data.tex` — LaTeX source for the data-op (fio) summary table,
-- `fio.pdf` / `fio.svg` — compiled artifacts (if `pdflatex` /
-  `pdftocairo` are available).
+- `fio.tex` — LaTeX source for the data-op (fio) summary table,
+- `metadata.csv`, `commit.csv`, `dev.csv`, `checkpoint-{create,read,commit}.csv`
+  — figure data.
+
+`./plot.py` renders those CSVs into `metadata.pdf`, `commit.pdf`, `dev.pdf`, and
+`checkpoint.pdf` (plus `.png`); `./paper.sh` runs both steps in order.
 
 The table reports throughput in MB/s and compares each backend to native;
 cells under 5% from native render as `same as baseline`.

@@ -12,7 +12,7 @@ const TABLEAU_COLOR_DEFS: &str = "\
 \\definecolor{TableauRed}{HTML}{E15759}\n";
 
 pub fn render(results: &BenchResults, paper_dir: &Path) -> Result<()> {
-    let tex_path = paper_dir.join("ops-data.tex");
+    let tex_path = paper_dir.join("fio.tex");
 
     let tex = build_tex(results)?;
     std::fs::write(&tex_path, &tex).with_context(|| format!("writing {}", tex_path.display()))?;

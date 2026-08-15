@@ -1639,10 +1639,16 @@ fn main() -> Result<()> {
                     backends: vec![result],
                 }],
             };
-            let merged = write_results(&partial, &out_dir)?;
-            report::render_one(&merged, workload.name(), &out_dir)?;
+            // Results are merged to disk after every (workload, backend) pair so
+            // a crashed run keeps its data. Rendering is a separate step —
+            // run `./report.sh` or `./paper.sh` to build the artifacts.
+            write_results(&partial, &out_dir)?;
         }
     }
+
+    eprintln!("Results written to {}.", json_path.display());
+    eprintln!("  ./report.sh  → HTML dashboard");
+    eprintln!("  ./paper.sh   → paper figures and tables");
 
     Ok(())
 }
