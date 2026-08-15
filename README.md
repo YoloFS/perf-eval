@@ -543,14 +543,19 @@ place YoloFS in context relative to alternatives.
 | Backend | Mechanism | Needs root? | Default? |
 |---|---|---|---|
 | `native` | Direct ext4 writes, no staging | no | yes |
-| `yolo-no-perm` | Kernel stackable fs; permission gating disabled (`permission=false`) | no (setuid) | yes |
-| `yolo-realistic` | Kernel stackable fs; workload-defined rules | no (setuid) | yes |
-| `overlayfs` | User-namespace overlayfs; replay upper on commit | no (user-ns) | yes |
+| `yolo-no-perm` | Kernel stackable fs; permission gating disabled (`permission=false`) | no (file caps on `yolo`) | yes |
+| `yolo-realistic` | Kernel stackable fs; workload-defined rules | no (file caps on `yolo`) | yes |
+| `overlayfs` | overlayfs; replay upper on commit | mounts via `sudo` | yes |
 | `branchfs` | FUSE copy-on-write branches; `branchfs commit` | no | yes |
 
-`yolo-bench` does **not** need to run as root. The YoloFS binary is setuid,
-overlayfs uses user namespaces, and branchfs runs in userspace. Only
-the profiler (§7) invokes `sudo` internally for `perf` and `bpftrace`.
+`yolo-bench` itself is **never** run as root. The YoloFS backends reach the
+module through the installed `yolo` CLI, which carries
+`cap_sys_admin,cap_sys_module` file capabilities, and branchfs runs in
+userspace over FUSE. Two paths do shell out to `sudo` internally, so
+passwordless `sudo` is expected: the overlayfs backend's per-iteration
+`mount -t overlay` / `umount`, and the profiler (§7) for `perf` and `bpftrace`.
+Without passwordless `sudo` the overlayfs backend reports itself unavailable
+and the remaining backends still run.
 
 ### YoloFS backends
 
