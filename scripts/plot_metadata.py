@@ -18,7 +18,16 @@ CAP_FACTOR = 5.0
 
 
 def plot_metadata(generated_dir):
-    out_path = generated_dir / 'metadata.pdf'
+    _plot_metadata(generated_dir, two_rows=False)
+
+
+def plot_metadata_two_row(generated_dir):
+    _plot_metadata(generated_dir, two_rows=True)
+
+
+def _plot_metadata(generated_dir, two_rows):
+    stem = 'metadata-2row' if two_rows else 'metadata'
+    out_path = generated_dir / f'{stem}.pdf'
     rows = read_csv_rows(generated_dir, 'metadata.csv')
 
     ops = ['create', 'open', 'stat', 'readdir', 'append', 'rename', 'unlink']
@@ -55,8 +64,22 @@ def plot_metadata(generated_dir):
     plt.rcParams.update({'font.size': 17, 'axes.labelsize': 17, 'xtick.labelsize': 13,
                          'ytick.labelsize': 14, 'legend.fontsize': 14})
 
-    fig = plt.figure(figsize=(14, 1.8))
-    gs = gridspec.GridSpec(1, len(ops), figure=fig, wspace=0.35, hspace=0.35)
+    if two_rows:
+        fig = plt.figure(figsize=(8, 4))
+        gs = gridspec.GridSpec(2, 8, figure=fig, wspace=1.4, hspace=0.65)
+        positions = [
+            (0, slice(0, 2)),
+            (0, slice(2, 4)),
+            (0, slice(4, 6)),
+            (0, slice(6, 8)),
+            (1, slice(1, 3)),
+            (1, slice(3, 5)),
+            (1, slice(5, 7)),
+        ]
+    else:
+        fig = plt.figure(figsize=(14, 1.8))
+        gs = gridspec.GridSpec(1, len(ops), figure=fig, wspace=0.35, hspace=0.35)
+        positions = [(0, col_idx) for col_idx in range(len(ops))]
 
     drew_native_line = False
     for col_idx, op in enumerate(ops):
@@ -80,7 +103,8 @@ def plot_metadata(generated_dir):
         if not all_vals:
             continue
 
-        ax = fig.add_subplot(gs[0, col_idx])
+        row_idx, col_spec = positions[col_idx]
+        ax = fig.add_subplot(gs[row_idx, col_spec])
         cap = compute_cap(all_vals, floor_vals)
         ax.set_ylim(0, cap)
         ax.spines['top'].set_visible(False)
@@ -142,7 +166,7 @@ def plot_metadata(generated_dir):
         ax.set_xticks(x)
         ax.set_xticklabels(src_labels)
         ax.tick_params(axis='x', length=0, pad=2)
-        if col_idx == 0:
+        if col_idx == 0 or (two_rows and col_idx == 4):
             ax.set_ylabel('Latency (\u00b5s)')
 
     legend_items = [native_legend_handle(native_key)]
@@ -151,8 +175,7 @@ def plot_metadata(generated_dir):
 
     fig.legend(handles=legend_items, loc='upper center', ncol=nb + 1,
                bbox_to_anchor=(0.5, 1.0))
-    fig.subplots_adjust(top=0.72)
+    fig.subplots_adjust(top=0.82 if two_rows else 0.72)
 
     save_figure(fig, out_path)
-
 

@@ -7,13 +7,14 @@ from pathlib import Path
 from scripts.plot_checkpoint import plot_checkpoint
 from scripts.plot_commit import plot_commit
 from scripts.plot_dev import plot_dev
-from scripts.plot_metadata import plot_metadata
+from scripts.plot_metadata import plot_metadata, plot_metadata_two_row
 
 CHARTS = {
-    'metadata':   plot_metadata,
-    'commit':     plot_commit,
-    'checkpoint': plot_checkpoint,
-    'dev':        plot_dev,
+    'metadata':      plot_metadata,
+    'metadata-2row': plot_metadata_two_row,
+    'commit':        plot_commit,
+    'checkpoint':    plot_checkpoint,
+    'dev':           plot_dev,
 }
 
 DEFAULT_DIR = Path(__file__).resolve().parent.parent / "paper" / "generated"
