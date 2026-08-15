@@ -95,10 +95,12 @@ impl Workload for Worktree {
     }
 
     fn realistic_rules(&self, session_root: &Path) -> Vec<(String, Perm)> {
-        vec![
+        let mut rules = vec![
             (session_root.to_string_lossy().into_owned(), Perm::Allow),
             (self.fixture.to_string_lossy().into_owned(), Perm::Allow),
-        ]
+        ];
+        rules.extend(crate::workloads::git_tool_rules());
+        rules
     }
 
     fn run(&self, dest: &Path, verbose: bool) -> Result<()> {

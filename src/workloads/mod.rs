@@ -283,6 +283,32 @@ pub fn allow_rw_rules(session_root: &Path) -> Vec<(String, Perm)> {
     vec![(session_root.to_string_lossy().into_owned(), Perm::Allow)]
 }
 
+/// Rules every workload that shells out to `git` needs.
+///
+/// git reads its system and user config on each invocation, and the dynamic
+/// loader reads `/etc/ld.so.cache`. A path with no matching rule resolves to
+/// `Perm::Ask` in the kernel, and no daemon answers asks during a benchmark —
+/// so each one stalls for the full prompt timeout and is then denied. Keep
+/// this list in one place: it drifted out of `worktree` once already.
+pub fn git_tool_rules() -> Vec<(String, Perm)> {
+    let mut rules = vec![
+        ("/etc".to_string(), Perm::ReadOnly),
+        ("/etc/gitconfig".to_string(), Perm::Allow),
+        ("/tmp".to_string(), Perm::Allow),
+    ];
+    if let Some(home) = dirs_next::home_dir() {
+        rules.push((
+            home.join(".gitconfig").to_string_lossy().into_owned(),
+            Perm::Allow,
+        ));
+        rules.push((
+            home.join(".config/git").to_string_lossy().into_owned(),
+            Perm::ReadOnly,
+        ));
+    }
+    rules
+}
+
 pub fn emit_op_result(result: &OpResult) -> Result<()> {
     let json = serde_json::to_string(result).context("serialising OpResult")?;
     let stdout = io::stdout();

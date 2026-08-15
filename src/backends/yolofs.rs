@@ -64,6 +64,42 @@ impl Session {
             .join(rel)
     }
 
+    /// Paths the kernel gated because no rule matched them.
+    ///
+    /// With no daemon answering asks, each such path stalls for the session's
+    /// prompt timeout and is then denied — so the workload is both slower than
+    /// it should be and measuring a run that couldn't read what it needed.
+    /// That is a broken `realistic_rules`, not a result: report it, don't
+    /// record it. Returns None when the journal is clean.
+    fn permission_denials(&self) -> Result<Option<String>> {
+        use yolofs::journal::{GateResult, Journal, Note, Record};
+
+        let journal = Journal::read(&self.root.path().join(".yolofs"))
+            .context("reading session journal for permission denials")?;
+
+        let mut denied: Vec<String> = Vec::new();
+        for segment in &journal.segments {
+            for record in &segment.records {
+                if let Record::Note(Note::Gate { path, result, .. }) = record
+                    && matches!(result, GateResult::AskDeny | GateResult::DirectDeny)
+                    && !denied.contains(path)
+                {
+                    denied.push(path.clone());
+                }
+            }
+        }
+        if denied.is_empty() {
+            return Ok(None);
+        }
+        Ok(Some(format!(
+            "permission-gated run denied {} path(s) with no matching rule: {}. \
+             Add them to the workload's realistic_rules() — results from this \
+             run would be invalid.",
+            denied.len(),
+            denied.join(", ")
+        )))
+    }
+
     fn checkpoint_named(&self, name: &str) -> Result<()> {
         let out = Command::new("yolo")
             .arg("snapshot")
@@ -358,6 +394,12 @@ impl Backend for YoloRealistic {
         let config = Config {
             permission: true,
             auto_snapshot: false,
+            // Nothing answers asks during a benchmark (`yolo run` starts no
+            // watcher), so an unmatched path can only ever time out and deny.
+            // Keep that cheap — permission_denials() turns it into an error
+            // straight after the run — instead of paying the 30 s default per
+            // path. Must stay > 0: the kernel reads 0 as "wait forever".
+            prompt_timeout: Some(0.5),
             rules,
             ..Default::default()
         };
@@ -422,7 +464,17 @@ impl Backend for YoloRealistic {
             crate::workloads::drop_page_cache()
                 .context("dropping page cache after subprocess READY")?;
         }
-        let result = sp.go_with_checkpoint(&mut session)?;
+        // Check the journal whichever way the workload went: on failure a
+        // denial is usually the cause and makes the better error, and on
+        // success it means we just measured a crippled run.
+        let result = sp.go_with_checkpoint(&mut session);
+        if let Some(msg) = session.permission_denials()? {
+            return Err(match result {
+                Ok(_) => anyhow::anyhow!("{msg}"),
+                Err(e) => e.context(msg),
+            });
+        }
+        let result = result?;
         let status_us = session.status_time()?;
 
         let commit_ms = session.commit(verbose)?;
@@ -444,3 +496,49 @@ impl Backend for YoloRealistic {
 }
 
 // ── For profiler (needs Session access) ──────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn session_with_journal(bytes: &[u8]) -> Session {
+        let root = tempfile::tempdir().unwrap();
+        let dir = root.path().join(".yolofs");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("journal"), bytes).unwrap();
+        Session { root }
+    }
+
+    /// Shape captured from a `worktree` run that stalled in `git worktree add`:
+    /// every gate is an ask that timed out unanswered and was denied ('n').
+    #[test]
+    fn denied_paths_are_reported_and_deduped() {
+        let session = session_with_journal(
+            b"G\0/etc/ld.so.cache\0r\0n\n\
+              G\0/etc/ld.so.cache\0r\0n\n\
+              G\0/etc/gitconfig\0r\0n\n\
+              G\0/users/szhong/.gitconfig\0r\0n\n",
+        );
+        let msg = session
+            .permission_denials()
+            .unwrap()
+            .expect("denials should be reported");
+        assert!(msg.contains("/etc/ld.so.cache"), "{msg}");
+        assert!(msg.contains("/etc/gitconfig"), "{msg}");
+        assert!(msg.contains("/users/szhong/.gitconfig"), "{msg}");
+        assert!(msg.contains("3 path(s)"), "repeats should collapse: {msg}");
+    }
+
+    #[test]
+    fn answered_allows_are_not_denials() {
+        let session = session_with_journal(b"G\0/etc/gitconfig\0r\0y\n");
+        assert!(session.permission_denials().unwrap().is_none());
+    }
+
+    #[test]
+    fn clean_session_has_no_denials() {
+        let root = tempfile::tempdir().unwrap();
+        let session = Session { root };
+        assert!(session.permission_denials().unwrap().is_none());
+    }
+}

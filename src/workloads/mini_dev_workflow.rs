@@ -193,20 +193,8 @@ impl Workload for MiniDevWorkflow {
             (session_root.to_string_lossy().into_owned(), Perm::Allow),
             (self.repo_cache.to_string_lossy().into_owned(), Perm::Allow),
             (self.fixture_dir.to_string_lossy().into_owned(), Perm::ReadOnly),
-            ("/etc".to_string(), Perm::ReadOnly),
-            ("/etc/gitconfig".to_string(), Perm::Allow),
-            ("/tmp".to_string(), Perm::Allow),
         ];
-        if let Some(home) = dirs_next::home_dir() {
-            rules.push((
-                home.join(".gitconfig").to_string_lossy().into_owned(),
-                Perm::Allow,
-            ));
-            rules.push((
-                home.join(".config/git").to_string_lossy().into_owned(),
-                Perm::ReadOnly,
-            ));
-        }
+        rules.extend(crate::workloads::git_tool_rules());
         rules
     }
 
