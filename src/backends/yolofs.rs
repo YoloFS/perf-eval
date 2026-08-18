@@ -372,6 +372,13 @@ impl Backend for YoloRealistic {
             .tempdir_in(&cache)?;
 
         let mut rules = BTreeMap::new();
+        // A real session allows the user's own home directory; workloads only
+        // spell out the paths that need something narrower. Inserted first so
+        // a workload rule on the same path still wins, and the kernel's
+        // nearest-ancestor walk keeps deeper rules (fixtures, caches) intact.
+        if let Some(home) = dirs_next::home_dir() {
+            rules.insert(home.to_string_lossy().into_owned(), Perm::Allow);
+        }
         for (path, perm) in workload.realistic_rules(root.path()) {
             rules.insert(path, perm);
         }

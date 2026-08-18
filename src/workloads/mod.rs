@@ -290,23 +290,15 @@ pub fn allow_rw_rules(session_root: &Path) -> Vec<(String, Perm)> {
 /// `Perm::Ask` in the kernel, and no daemon answers asks during a benchmark —
 /// so each one stalls for the full prompt timeout and is then denied. Keep
 /// this list in one place: it drifted out of `worktree` once already.
+///
+/// The user config under `$HOME` needs no entry here: the realistic scenario
+/// allows the whole home directory (see `YoloRealistic::run_one`).
 pub fn git_tool_rules() -> Vec<(String, Perm)> {
-    let mut rules = vec![
+    vec![
         ("/etc".to_string(), Perm::ReadOnly),
         ("/etc/gitconfig".to_string(), Perm::Allow),
         ("/tmp".to_string(), Perm::Allow),
-    ];
-    if let Some(home) = dirs_next::home_dir() {
-        rules.push((
-            home.join(".gitconfig").to_string_lossy().into_owned(),
-            Perm::Allow,
-        ));
-        rules.push((
-            home.join(".config/git").to_string_lossy().into_owned(),
-            Perm::ReadOnly,
-        ));
-    }
-    rules
+    ]
 }
 
 pub fn emit_op_result(result: &OpResult) -> Result<()> {
