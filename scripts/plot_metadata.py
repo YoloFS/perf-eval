@@ -173,9 +173,12 @@ def _plot_metadata(generated_dir, two_rows):
     for b in bar_backends:
         legend_items.append(backend_legend_handle(b))
 
+    legend_spacing = (
+        {'columnspacing': 0.75, 'handlelength': 1.7, 'handletextpad': 0.4}
+        if two_rows else {}
+    )
     fig.legend(handles=legend_items, loc='upper center', ncol=nb + 1,
-               bbox_to_anchor=(0.5, 1.0))
+               bbox_to_anchor=(0.5, 1.0), **legend_spacing)
     fig.subplots_adjust(top=0.82 if two_rows else 0.72)
 
     save_figure(fig, out_path)
-
