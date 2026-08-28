@@ -37,6 +37,8 @@ for _d in (
         break
 
 plt.rcParams.update({
+    'pdf.fonttype': 42,
+    'ps.fonttype': 42,
     'font.family': 'serif',
     'font.serif': ['Linux Libertine O'],
     'font.size': 12,
